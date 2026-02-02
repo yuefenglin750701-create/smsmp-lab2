@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實驗室後台管理系統 (Admin Dashboard)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- 1. Fallback Logic -->
+    <script>
+        window.isLocal = true;
+        // Same helper to check size for local storage
+        const checkQuota = (data) => {
+            try { if (JSON.stringify(data).length > 4500000) throw new Error("本機儲存空間已滿 (5MB)。請切換至 Supabase 雲端模式。"); } catch(e) { throw e; }
+        };
+
+        window.enableLocalMode = () => {
+            console.log("Initializing Local Mode...");
+            window.isLocal = true;
+            const getLocal = (key) => {
+                try { return JSON.parse(localStorage.getItem('smsmp_' + key) || '[]'); } catch (e) { return []; }
+            };
+            const setLocal = (key, data) => {
+                checkQuota(data);
+                localStorage.setItem('smsmp_' + key, JSON.stringify(data));
+            };
+
+            window.dbOps = {
+                signIn: async () => true,
+                onAuth: (cb) => { setTimeout(() => cb({ uid: 'local-admin' }), 50); return () => {}; },
+                fetch: async (colName) => getLocal(colName),
+                add: async (colName, data) => {
+                    const list = getLocal(colName);
+                    const newItem = { ...data, id: 'loc_' + Date.now(), createdAt: Date.now() };
+                    setLocal(colName, [newItem, ...list]);
+                    return newItem;
+                },
+                update: async (colName, id, data) => {
+                    const list = getLocal(colName);
+                    const idx = list.findIndex(i => i.id === id);
+                    if (idx !== -1) {
+                        list[idx] = { ...list[idx], ...data };
+                        setLocal(colName, list);
+                    }
+                },
+                delete: async (colName, id) => {
+                    const list = getLocal(colName);
+                    setLocal(colName, list.filter(i => i.id !== id));
+                },
+                batchAdd: async (colName, items) => {
+                    const list = getLocal(colName);
+                    const newItems = items.map((item, idx) => ({ ...item, id: 'batch_' + Date.now() + '_' + idx, createdAt: Date.now() - idx * 100 }));
+                    setLocal(colName, [...newItems, ...list]);
+                },
+                initDefaults: async (defaultData) => {
+                    for (const [key, items] of Object.entries(defaultData)) {
+                        if (getLocal(key).length === 0) {
+                            const newItems = items.map((i, idx) => ({ ...i, id: `init_${idx}`, createdAt: Date.now() - (idx * 1000) }));
+                            setLocal(key, newItems);
+                        }
+                    }
+                }
+            };
+        };
+        window.enableLocalMode();
+    </script>
+
+    <!-- 2. Supabase Logic -->
+    <script type="module">
+        // ★★★ 設定區 ★★★
+        const supabaseUrl = "https://uyvyxkrikmdyypppqsdt.supabase.co"; 
+        const supabaseKey = "sb_publishable_AR5cKUsnsxgFRcC1rDCWlQ_mYRrxVUC"; 
+
+        try {
+            if (supabaseKey.includes("請在此填入")) {
+               console.warn("Supabase Key missing, using Local Mode");
+            } else {
+                const { createClient } = supabase;
+                const _supabase = createClient(supabaseUrl, supabaseKey);
+                
+                window.isLocal = false;
+                window.dbOps = {
+                    signIn: async () => true, 
+                    onAuth: (cb) => { cb({ uid: 'supabase-admin' }); return () => {}; },
+                    
+                    fetch: async (colName) => {
+                        // Fetch latest 100 items for admin to keep it fast
+                        const { data, error } = await _supabase
+                            .from('lab_content')
+                            .select('id, data')
+                            .eq('collection', colName)
+                            .order('created_at', { ascending: false })
+                            .limit(100);
+                        if (error) throw error;
+                        return data.map(row => ({ id: row.id, ...row.data }));
+                    },
+                    
+                    add: async (colName, data) => {
+                        const { error } = await _supabase
+                            .from('lab_content')
+                            .insert({ collection: colName, data: { ...data, createdAt: Date.now() } });
+                        if (error) throw error;
+                    },
+                    
+                    update: async (colName, id, data) => {
+                        // We assume 'data' is the full object.
+                        // For a real app, merging is better, but this suffices for admin replacement.
+                        const { error } = await _supabase
+                            .from('lab_content')
+                            .update({ data: { ...data } })
+                            .eq('id', id);
+                        if (error) throw error;
+                    },
+                    
+                    delete: async (colName, id) => {
+                        const { error } = await _supabase
+                            .from('lab_content')
+                            .delete()
+                            .eq('id', id);
+                        if (error) throw error;
+                    },
+                    
+                    batchAdd: async (colName, items) => {
+                        const rows = items.map(item => ({
+                            collection: colName,
+                            data: { ...item, createdAt: item.createdAt || Date.now() }
+                        }));
+                        const { error } = await _supabase.from('lab_content').insert(rows);
+                        if (error) throw error;
+                    },
+
+                    initDefaults: async (defaultData) => {
+                        for (const [key, items] of Object.entries(defaultData)) {
+                            const { count } = await _supabase
+                                .from('lab_content')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('collection', key);
+                            
+                            if (count === 0) {
+                                const rows = items.map((item, idx) => ({
+                                    collection: key,
+                                    data: { ...item, id: `init_${idx}`, createdAt: Date.now() - idx * 1000 }
+                                }));
+                                await _supabase.from('lab_content').insert(rows);
+                            }
+                        }
+                    }
+                };
+                console.log("⚡ Supabase Connected");
+            }
+        } catch (e) {
+            console.warn("⚠️ Supabase failed, using Local Mode", e);
+        }
+    </script>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, Component } = React;
+        class ErrorBoundary extends Component {
+            constructor(props) { super(props); this.state = { hasError: false }; }
+            static getDerivedStateFromError(error) { return { hasError: true }; }
+            render() {
+                if (this.state.hasError) return <div className="p-10 text-center">系統發生錯誤，請重整頁面。</div>;
+                return this.props.children;
+            }
+        }
+
+        const getCredentials = () => ({ username: localStorage.getItem('smsmp_admin_user') || 'Yflin', password: localStorage.getItem('smsmp_admin_pass') || '0701' });
+
+        // ★★★ Real Data from uploaded file ★★★
+        const defaultData = {
+            news: [
+                { date: "2025-11-06", title: "114年 台灣精密工程學會‧東台集團【精密工程專題與論文獎】，榮獲研究論文獎佳作", tag: "Award" },
+                { date: "2025-11-06", title: "114年 台灣精密工程學會‧東台集團【精密工程專題與論文獎】，榮獲大專專題獎佳作", tag: "Award" },
+                { date: "2025-06-18", title: "114年台中精機盃 CNC第三屆全國多軸機組技能競賽，榮獲第六名", tag: "Award" },
+                { date: "2024-06-02", title: "113年台中精機盃 CNC第二屆全國多軸機技能競賽，榮獲第三名", tag: "Award" },
+                { date: "2023-12-01", title: "2023年中國機械工程學會第40屆全國學術研討會暨學生論文發表競賽，榮獲國科會機械固力與熱流學門第三名", tag: "Award" },
+                { date: "2023-10-28", title: "2023年『CTTT 2023 第六屆臺灣磨潤科技研討會』，榮獲特別獎", tag: "Award" },
+                { date: "2023-10-14", title: "2023年第十二屆中興大學『精密工具機與智慧化技術』專題作競賽，榮獲全國第二名", tag: "Award" },
+                { date: "2023-04-28", title: "2023年『ISME第八屆台灣機電工程國際學會全國學術研討會』，榮獲先進複合材料論壇最佳論文獎", tag: "Award" },
+                { date: "2023-04-16", title: "112年『台中精機盃CNC多軸機技能競賽』，榮獲全國第七名", tag: "Award" },
+                { date: "2020-11-20", title: "2020年智慧機械 SMB APP 競賽，榮獲佳作", tag: "Award" },
+                { date: "2020-11-07", title: "2020年『全國磨潤科技實務技術競賽』，榮獲最佳技術呈現獎", tag: "Award" },
+                { date: "2020-10-15", title: "2020年『全國三菱電機CNC智能APP創意開發競賽』，榮獲第一名", tag: "Award" },
+                { date: "2020-09-26", title: "2020年第九屆中興大學『精密工具機與智慧化技術』專題實作競賽，榮獲第二名", tag: "Award" },
+                { date: "2020-08-28", title: "2020年台灣工程國際學會全國學術研討會福星熱能創意競賽，榮獲佳作", tag: "Award" }
+            ],
+            projects: [
+                { type: "patent", year: "2024/04/21", title: "晶錠切割裝置", agency: "I840267", role: "發明人: 林岳鋒、蔡明義、嚴仕育、劉萓姍" },
+                { type: "patent", year: "2021/10/11", title: "自動擠膏拋光刀把", agency: "I742924", role: "發明人: 蔡明義、郭俊麟、林岳鋒、黃守正" },
+                { type: "patent", year: "2021/06/01", title: "自動對刀裝置以及磨床", agency: "M612712", role: "發明人: 蔡明義、林岳鋒、陳俊延" },
+                { type: "patent", year: "2019/04/21", title: "可調式壓彈簧刀把", agency: "I656941", role: "發明人: 蔡明義、郭俊麟、林岳鋒" },
+                { type: "government", year: "114/06/01-115/05/31", title: "高長徑比減振車刀桿設計與智能搪孔加工參數優化系統開發", agency: "NSTC-114-2622-E-167-003", role: "計畫主持人" },
+                { type: "government", year: "113/08/01-114/07/31", title: "應用倒傳遞類神經網路結合超音波震動輔助與訊號擷取分析技術於微銑削加工單晶碳化矽晶碇之研究", agency: "NSTC-113-2221-E-167-027", role: "計畫主持人" },
+                { type: "government", year: "113/02/01-114/01/31", title: "難切削加工技術與製程開發產學聯盟(3/3)", agency: "NSTC-113-2622-8-167-001-TE3", role: "計畫主持人" },
+                { type: "government", year: "112/06/01-113/05/31", title: "高長徑比(L/D=12)減震刀桿設計開發", agency: "NSTC-112-2622-E-167-003", role: "計畫主持人" },
+                { type: "government", year: "112/02/01-113/01/31", title: "難削材加工技術與製程開發產學聯盟(2/3)", agency: "NSTC-112-2622-8-167-001-TE3", role: "計畫主持人" },
+                { type: "industry", year: "114/02/14 ~ 114/11/30", title: "液靜壓磨床之AI自適應加工參數優化與智慧刀具磨損補償系統開發", agency: "大光長榮機械", role: "計畫主持人" },
+                { type: "industry", year: "114/02/14 ~ 114/11/30", title: "智慧多軸工具機加工能效管理與內藏式主軸冷卻技術優化研究", agency: "凱柏精密機械", role: "計畫主持人" },
+                { type: "industry", year: "113/09/01 ~ 114/05/31", title: "適用於小薄晶片之高取片良率頂針組開發計畫", agency: "豪峰科技", role: "計畫主持人" },
+                { type: "industry", year: "113/06/01 ~ 114/05/31", title: "線切割高效節能產線規劃及驗證", agency: "立泉線切割", role: "計畫主持人" },
+                { type: "industry", year: "113/05/01 ~ 113/12/31", title: "半導體國際連結創新賦能計劃", agency: "台灣平坦化應用技術協會", role: "計畫主持人" }
+            ],
+            members: [
+                { type: 'pi', name: "林岳鋒 (Dr. Yan-Fa Lin)", year: "", research: "創新高效能加工, 研磨/拋光加工技術開發", researchDetail: "林岳鋒副教授現任國立勤益科技大學機械工程系副主任...", email: "yflin@ncut.edu.tw", phone: "04-23924505 分機 7173", awards: "強調「實機操作導向」...", photo: "391692351_7466255803389344_4203488068870191778_n.jpg", pdfs: [] }
+            ],
+            gallery: [],
+            publications: []
+        };
+        
+        // ... (Include all React Components: LoginForm, EditorModal, AdminApp from previous admin.html) ...
+        const TAB_NAMES = { news: '最新消息', projects: '歷年計畫', members: '成員管理', publications: '發表論文', gallery: '生活寫真' };
+        
+        const FolderIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 text-yellow-400 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">
+                <path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3V18a3 3 0 0 0 3 3h15ZM1.5 10.146V6a3 3 0 0 1 3-3h5.379a2.25 2.25 0 0 1 1.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 0 1 3 3v1.146A4.483 4.483 0 0 0 19.5 9h-15a4.483 4.483 0 0 0-3 1.146Z" />
+            </svg>
+        );
+
+        // --- Aggressive Image Compressor ---
+        const compressImage = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // Aggressive Downscale: Max 600px
+                        const MAX_SIZE = 600;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                        } else {
+                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Aggressive Compression: 0.5 Quality
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                        resolve(dataUrl);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        };
+
+        const LoginForm = ({ onLogin }) => {
+            const [u, setU] = useState('');
+            const [p, setP] = useState('');
+            const [err, setErr] = useState('');
+            const [localMode, setLocalMode] = useState(window.isLocal);
+            useEffect(() => { const i = setInterval(() => setLocalMode(window.isLocal), 500); return () => clearInterval(i); }, []);
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const creds = getCredentials();
+                if (u === creds.username && p === creds.password) onLogin();
+                else setErr('帳號或密碼錯誤');
+            };
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                    <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm border border-slate-200">
+                        <h2 className="text-xl font-bold mb-6 text-center text-slate-800">後台登入</h2>
+                        <div className={`mb-4 text-xs p-2 rounded flex items-center ${localMode ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                            <span className="mr-2">{localMode ? '⚠️' : '✅'}</span> 
+                            <span>{localMode ? '本機模式 (資料庫未連線)' : '已連線至雲端資料庫'}</span>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <input className="w-full border p-2 rounded" placeholder="帳號" value={u} onChange={e=>setU(e.target.value)} required />
+                            <input className="w-full border p-2 rounded" type="password" placeholder="密碼" value={p} onChange={e=>setP(e.target.value)} required />
+                            {err && <p className="text-red-500 text-center text-sm">{err}</p>}
+                            <button className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition-colors">登入</button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const EditorModal = ({ activeTab, initData, onSave, onBatchSave, onClose }) => {
+            const [formData, setFormData] = useState({});
+            const [galleryImages, setGalleryImages] = useState([]);
+            const [coverIndex, setCoverIndex] = useState(0);
+            const [customInput, setCustomInput] = useState({ year: false, role: false, classYear: false, yearDisplay: false });
+            const [isSaving, setIsSaving] = useState(false);
+            const [processingMsg, setProcessingMsg] = useState('');
+
+            useEffect(() => {
+                const d = { ...initData };
+                if (activeTab === 'members' && !d.type) d.type = 'master';
+                // Initialize default values for new items
+                if (!d.id) {
+                    if (activeTab === 'projects') d.type = 'government';
+                    if (activeTab === 'members') d.year = '碩一';
+                    if (activeTab === 'news') d.tag = 'Activity';
+                }
+                setFormData(d);
+                if (activeTab === 'gallery') {
+                    setGalleryImages(d.src ? [{src: d.src, id: 'init'}] : []);
+                    setCoverIndex(0);
+                }
+                setCustomInput({ year: false, role: false, classYear: false, yearDisplay: false });
+            }, [initData, activeTab]);
+
+            const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+            
+            const processFiles = async (files) => {
+                setProcessingMsg(`正在壓縮 ${files.length} 張圖片...`);
+                setIsSaving(true);
+                const processed = [];
+                
+                try {
+                    for (const file of files) {
+                        const compressedDataUrl = await compressImage(file);
+                        processed.push({ src: compressedDataUrl, id: Math.random() });
+                    }
+                    
+                    if (activeTab === 'gallery') {
+                        setGalleryImages(prev => [...prev, ...processed]);
+                    } else {
+                        // For single image fields, take the first one
+                        if (processed.length > 0) {
+                            const field = activeTab === 'members' ? 'photo' : 'image';
+                            setFormData(prev => ({ ...prev, [field]: processed[0].src }));
+                        }
+                    }
+                } catch(e) {
+                    alert("圖片處理失敗: " + e.message);
+                }
+                
+                setIsSaving(false);
+                setProcessingMsg('');
+            };
+
+            const handleFiles = (e) => {
+                const files = Array.from(e.target.files);
+                processFiles(files);
+            };
+
+            const handlePaste = (e) => {
+                if (activeTab !== 'gallery') return;
+                const items = e.clipboardData.items;
+                const files = [];
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        files.push(items[i].getAsFile());
+                    }
+                }
+                if (files.length > 0) processFiles(files);
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsSaving(true);
+                setProcessingMsg('資料儲存中...');
+                try {
+                    if (activeTab === 'gallery' && !formData.id && galleryImages.length > 0) {
+                        const items = galleryImages.map((img, idx) => {
+                            const offset = idx === coverIndex ? 0 : (idx + 1) * 1000;
+                            return { ...formData, src: img.src, createdAt: Date.now() - offset };
+                        });
+                        await onBatchSave(items); 
+                        onClose();
+                    } else {
+                        if (activeTab === 'gallery' && galleryImages.length > 0) formData.src = galleryImages[0].src;
+                        await onSave(formData);
+                        onClose();
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("儲存發生錯誤: " + err.message);
+                } finally {
+                    setIsSaving(false);
+                    setProcessingMsg('');
+                }
+            };
+
+            // Options
+            const isMember = activeTab === 'members';
+            const isGallery = activeTab === 'gallery';
+            const isPI = formData.type === 'pi';
+            const isAlumni = formData.type === 'alumni';
+            const isStudent = ['master', 'phd'].includes(formData.type);
+            const yearOptions = [];
+            for (let y = 116; y >= 105; y--) yearOptions.push({ val: String(y), label: `民國 ${y} 年` });
+            for (let y = 2030; y >= 2016; y--) yearOptions.push({ val: String(y), label: `西元 ${y} 年` });
+            const memberClassYears = [];
+            for (let y = 116; y >= 80; y--) memberClassYears.push(String(y));
+            const memberYearDisplays = ["碩一", "碩二", "碩三", "博一", "博二", "博三", "博四", "博五"];
+
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onPaste={handlePaste}>
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto relative">
+                        {isSaving && (
+                            <div className="absolute inset-0 bg-white/80 z-50 flex items-center justify-center flex-col">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-2"></div>
+                                <div className="text-blue-600 font-bold">{processingMsg}</div>
+                            </div>
+                        )}
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                            <h3 className="text-xl font-bold">{formData.id ? '編輯' : '新增'} {isGallery ? '(相簿模式)' : ''}</h3>
+                            <div>
+                                <label className="block text-sm font-bold mb-1">{isMember ? '姓名' : '標題'}</label>
+                                <input required name={isMember ? 'name' : 'title'} value={(isMember ? formData.name : formData.title) || ''} onChange={handleChange} className="w-full border p-2 rounded" />
+                                {isGallery && <p className="text-xs text-gray-500 mt-1">相同標題的照片會自動歸類為同一本相簿。</p>}
+                            </div>
+                            
+                            {/* Member Specific Fields */}
+                            {isMember && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold mb-1">身分</label>
+                                        <select name="type" value={formData.type} onChange={handleChange} className="w-full border p-2 rounded">
+                                            <option value="pi">指導教授</option>
+                                            <option value="phd">博士生</option>
+                                            <option value="master">碩士生</option>
+                                            <option value="alumni">畢業校友</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        {isAlumni ? (
+                                            <>
+                                                <label className="block text-sm font-bold mb-1">畢業級別</label>
+                                                {!customInput.classYear ? (
+                                                    <select name="classYear" value={memberClassYears.includes(formData.classYear) ? formData.classYear : 'custom'} onChange={(e) => {
+                                                        if(e.target.value === 'custom') setCustomInput(p => ({...p, classYear: true}));
+                                                        else setFormData(p => ({...p, classYear: e.target.value}));
+                                                    }} className="w-full border p-2 rounded">
+                                                        <option value="" disabled>請選擇</option>
+                                                        {memberClassYears.map(y => <option key={y} value={y}>{y}級</option>)}
+                                                        <option value="custom">自訂...</option>
+                                                    </select>
+                                                ) : (
+                                                    <div className="flex gap-2"><input name="classYear" value={formData.classYear||''} onChange={handleChange} className="w-full border p-2 rounded" placeholder="e.g. 113" /><button type="button" onClick={() => setCustomInput(p=>({...p, classYear: false}))} className="px-2 bg-gray-200 rounded text-xs">選單</button></div>
+                                                )}
+                                            </>
+                                        ) : (isStudent && (
+                                            <>
+                                                <label className="block text-sm font-bold mb-1">年級</label>
+                                                {!customInput.yearDisplay ? (
+                                                    <select name="year" value={memberYearDisplays.includes(formData.year) ? formData.year : 'custom'} onChange={(e) => {
+                                                        if(e.target.value === 'custom') setCustomInput(p => ({...p, yearDisplay: true}));
+                                                        else setFormData(p => ({...p, year: e.target.value}));
+                                                    }} className="w-full border p-2 rounded">
+                                                        <option value="" disabled>請選擇</option>
+                                                        {memberYearDisplays.map(y => <option key={y} value={y}>{y}</option>)}
+                                                        <option value="custom">自訂...</option>
+                                                    </select>
+                                                ) : (
+                                                    <div className="flex gap-2"><input name="year" value={formData.year || ''} onChange={handleChange} placeholder="e.g. 碩一" className="w-full border p-2 rounded" /><button type="button" onClick={() => setCustomInput(p=>({...p, yearDisplay: false}))} className="px-2 bg-gray-200 rounded text-xs">選單</button></div>
+                                                )}
+                                            </>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'news' && <input type="date" name="date" value={formData.date||''} onChange={handleChange} className="w-full border p-2 rounded" />}
+                            
+                            {activeTab === 'projects' && (
+                                <>
+                                    <label className="block"><span className="text-sm font-bold">年度</span>
+                                        {!customInput.year ? (
+                                            <select name="year" value={yearOptions.some(o => o.val === formData.year) ? formData.year : 'custom'} onChange={(e) => {
+                                                if(e.target.value === 'custom') setCustomInput(p => ({...p, year: true}));
+                                                else setFormData(p => ({...p, year: e.target.value}));
+                                            }} className="w-full border p-2 rounded mt-1"><option value="" disabled>請選擇年度</option>{yearOptions.map(opt => <option key={opt.val} value={opt.val}>{opt.label}</option>)}<option value="custom">自訂...</option></select>
+                                        ) : <div className="flex gap-2"><input name="year" value={formData.year || ''} onChange={handleChange} className="w-full border p-2 rounded mt-1" /><button type="button" onClick={() => setCustomInput(p=>({...p, year: false}))} className="px-2 bg-gray-200 rounded mt-1 text-xs">選單</button></div>}
+                                    </label>
+                                    <input name="type" placeholder="類型" value={formData.type||''} onChange={handleChange} className="w-full border p-2 rounded" />
+                                    <input name="agency" placeholder="單位" value={formData.agency||''} onChange={handleChange} className="w-full border p-2 rounded" />
+                                    <input name="role" placeholder="擔任角色" value={formData.role||''} onChange={handleChange} className="w-full border p-2 rounded" />
+                                    <textarea name="desc" placeholder="說明" value={formData.desc||''} onChange={handleChange} className="w-full border p-2 rounded" />
+                                </>
+                            )}
+
+                            {isGallery ? (
+                                <div className="border-2 border-dashed p-4 rounded bg-gray-50">
+                                    <div className="flex justify-between mb-2">
+                                        <label className="font-bold text-sm">相簿照片 (自動壓縮)</label>
+                                        <span className="text-xs bg-green-100 text-green-800 px-2 rounded">點擊設為封面</span>
+                                    </div>
+                                    <input type="file" accept="image/*" multiple onChange={handleFiles} className="mb-2 w-full text-sm" />
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {galleryImages.map((img, idx) => (
+                                            <div key={idx} onClick={() => setCoverIndex(idx)} className={`relative aspect-square cursor-pointer border-2 ${idx===coverIndex ? 'border-green-500' : 'border-transparent'}`}>
+                                                <img src={img.src} className="w-full h-full object-cover" />
+                                                {idx===coverIndex && <div className="absolute top-0 left-0 bg-green-500 text-white text-[10px] px-1">封面</div>}
+                                                <button type="button" onClick={(e)=>{e.stopPropagation();setGalleryImages(prev=>prev.filter((_,i)=>i!==idx))}} className="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 flex items-center justify-center rounded-bl">×</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                ['news', 'members'].includes(activeTab) && (
+                                    <div>
+                                        <label className="block text-sm font-bold mb-1">圖片 (自動壓縮)</label>
+                                        <input type="file" accept="image/*" onChange={handleFiles} className="w-full border p-2 rounded text-sm" />
+                                        {formData[activeTab==='members'?'photo':'image'] && <img src={formData[activeTab==='members'?'photo':'image']} className="h-20 mt-2 border rounded" />}
+                                    </div>
+                                )
+                            )}
+                            
+                            {isMember && (
+                                <>
+                                    <input name="research" placeholder={isPI ? '核心研究領域' : '研究主題'} value={formData.research || ''} onChange={handleChange} className="w-full border p-2 rounded mt-1"/>
+                                    <textarea name="researchDetail" placeholder={isPI ? '學術簡介' : '詳細內容'} value={formData.researchDetail || ''} onChange={handleChange} className="w-full border p-2 rounded mt-1 h-20"/>
+                                    <input name="email" placeholder="Email" value={formData.email || ''} onChange={handleChange} className="w-full border p-2 rounded mt-1"/>
+                                    {isPI && <input name="phone" placeholder="電話" value={formData.phone || ''} onChange={handleChange} className="w-full border p-2 rounded mt-1"/>}
+                                    <textarea name="awards" placeholder={isPI ? '教學特色' : '獲獎紀錄'} value={formData.awards || ''} onChange={handleChange} className="w-full border p-2 rounded mt-1"/>
+                                </>
+                            )}
+                            {activeTab === 'publications' && <input name="venue" placeholder="期刊/研討會" value={formData.venue||''} onChange={handleChange} className="w-full border p-2 rounded"/>}
+                            {activeTab === 'gallery' && <input name="desc" placeholder="相簿描述" value={formData.desc||''} onChange={handleChange} className="w-full border p-2 rounded" />}
+
+                            <div className="flex justify-end gap-2 pt-4">
+                                <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 border rounded disabled:opacity-50">取消</button>
+                                <button type="submit" disabled={isSaving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isSaving ? '處理中...' : '儲存'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const ChangePasswordModal = ({ isOpen, onClose }) => {
+            const [oldUser, setOldUser] = useState('');
+            const [oldPass, setOldPass] = useState('');
+            const [newPass, setNewPass] = useState('');
+            const [confirmPass, setConfirmPass] = useState('');
+            const [msg, setMsg] = useState({ type: '', text: '' });
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const current = getCredentials();
+                if (oldUser !== current.username || oldPass !== current.password) { setMsg({ type: 'error', text: '舊帳號或密碼錯誤' }); return; }
+                if (newPass !== confirmPass) { setMsg({ type: 'error', text: '兩次新密碼輸入不一致' }); return; }
+                if (newPass.length < 4) { setMsg({ type: 'error', text: '新密碼長度至少需 4 碼' }); return; }
+                updateCredentials(current.username, newPass); 
+                setMsg({ type: 'success', text: '密碼修改成功！' });
+                setTimeout(() => { setMsg({ type: '', text: '' }); onClose(); }, 1500);
+            };
+            useEffect(() => { if(isOpen) { setOldUser(''); setOldPass(''); setNewPass(''); setConfirmPass(''); setMsg({type:'', text:''}); } }, [isOpen]);
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h3 className="text-xl font-bold mb-4">修改管理員密碼</h3>
+                        {msg.text && <div className={`p-2 mb-4 rounded text-sm ${msg.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{msg.text}</div>}
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="bg-slate-50 p-3 rounded border border-slate-200"><input type="text" placeholder="目前的帳號" value={oldUser} onChange={e => setOldUser(e.target.value)} className="w-full border p-2 rounded mb-2 text-sm" required /><input type="password" placeholder="目前的密碼" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full border p-2 rounded text-sm" required /></div>
+                            <div className="bg-blue-50 p-3 rounded border border-blue-100"><input type="password" placeholder="新密碼" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full border p-2 rounded mb-2 text-sm" required /><input type="password" placeholder="確認新密碼" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full border p-2 rounded text-sm" required /></div>
+                            <div className="flex justify-end space-x-3 mt-4"><button type="button" onClick={onClose} className="px-4 py-2 border rounded text-slate-600 hover:bg-slate-50">取消</button><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">確認修改</button></div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const BatchImportModal = ({ isOpen, onClose, activeTab, onImport }) => {
+            const [jsonInput, setJsonInput] = useState('');
+            const [status, setStatus] = useState('');
+            const handleImport = async () => {
+                try {
+                    const parsedData = JSON.parse(jsonInput);
+                    if (!Array.isArray(parsedData)) throw new Error("輸入格式錯誤：必須是 JSON 陣列 [...]");
+                    setStatus('匯入中...');
+                    await onImport(parsedData);
+                    setStatus(`成功匯入 ${parsedData.length} 筆資料！`);
+                    setTimeout(() => { setStatus(''); setJsonInput(''); onClose(); }, 1500);
+                } catch (e) { setStatus('錯誤：' + e.message); }
+            };
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
+                        <h3 className="text-xl font-bold mb-2">批次匯入資料 ({activeTab})</h3>
+                        <p className="text-sm text-slate-500 mb-4">請貼上 JSON 格式的陣列資料。</p>
+                        <textarea className="w-full h-64 border p-2 rounded font-mono text-sm" value={jsonInput} onChange={e => setJsonInput(e.target.value)} placeholder="在此貼上 JSON 資料..."></textarea>
+                        {status && <p className={`mt-2 text-sm ${status.includes('錯誤') ? 'text-red-600' : 'text-green-600'}`}>{status}</p>}
+                        <div className="flex justify-end space-x-3 mt-4"><button onClick={onClose} className="px-4 py-2 border rounded">關閉</button><button onClick={handleImport} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">開始匯入</button></div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminApp = () => {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [user, setUser] = useState(null);
+            const [activeTab, setActiveTab] = useState('news');
+            const [dataList, setDataList] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [statusMsg, setStatusMsg] = useState('');
+            const [isPwdModalOpen, setIsPwdModalOpen] = useState(false);
+            const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+            const [viewingAlbum, setViewingAlbum] = useState(null); 
+            const [isEditorOpen, setIsEditorOpen] = useState(false);
+            const [editItem, setEditItem] = useState({});
+            const [forceUpdate, setForceUpdate] = useState(0);
+
+            useEffect(() => { window.forceUpdate = () => setForceUpdate(s => s + 1); }, []);
+
+            const albumGroups = useMemo(() => {
+                if (activeTab !== 'gallery') return {};
+                const groups = {};
+                (dataList || []).forEach(item => {
+                    const t = item.title || '(未命名)';
+                    if (!groups[t]) groups[t] = [];
+                    groups[t].push(item);
+                });
+                return groups;
+            }, [dataList, activeTab]);
+
+            const displayList = useMemo(() => {
+                if (activeTab === 'gallery' && viewingAlbum) return (dataList || []).filter(d => (d.title || '(未命名)') === viewingAlbum);
+                return dataList || [];
+            }, [dataList, activeTab, viewingAlbum]);
+
+            useEffect(() => {
+                if (isLoggedIn) {
+                    window.dbOps.signIn().then(() => window.dbOps.onAuth(setUser));
+                }
+            }, [isLoggedIn, forceUpdate]);
+
+            useEffect(() => { if (user) loadData(); }, [activeTab, user]);
+
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const list = await window.dbOps.fetch(activeTab);
+                    list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    setDataList(list);
+                } catch(e) { console.error(e); }
+                setLoading(false);
+            };
+
+            const handleSave = async (data) => {
+                try {
+                    if (data.id) await window.dbOps.update(activeTab, data.id, data);
+                    else await window.dbOps.add(activeTab, data);
+                    loadData();
+                    return true;
+                } catch(e) { alert("儲存失敗: " + e.message); throw e; }
+            };
+
+            const handleBatchSave = async (items) => {
+                try {
+                    await window.dbOps.batchAdd(activeTab, items);
+                    loadData();
+                    return true;
+                } catch(e) { alert("批次儲存失敗"); return false; }
+            };
+
+            const handleDelete = async (id) => {
+                if (confirm("確定刪除？")) {
+                    await window.dbOps.delete(activeTab, id);
+                    loadData();
+                }
+            };
+            
+            const ChangePwd = () => setIsPwdModalOpen(true);
+            const BatchImport = () => setIsBatchModalOpen(true);
+            const ResetDB = () => window.dbOps.initDefaults(defaultData).then(loadData);
+
+            if (!isLoggedIn) return <LoginForm onLogin={() => setIsLoggedIn(true)} />;
+            if (!user) return <div className="min-h-screen flex items-center justify-center text-gray-500">系統載入中...</div>;
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    <div className="w-full md:w-64 bg-slate-800 text-white p-6 flex-shrink-0">
+                        <h1 className="text-xl font-bold mb-8">實驗室後台</h1>
+                        <nav className="space-y-2">
+                            {Object.keys(TAB_NAMES).map(t => (
+                                <button key={t} onClick={() => { setActiveTab(t); setViewingAlbum(null); }} className={`w-full text-left px-4 py-2 rounded ${activeTab===t ? 'bg-blue-600' : 'hover:bg-slate-700'}`}>{TAB_NAMES[t]}</button>
+                            ))}
+                        </nav>
+                        <div className="mt-4 pt-4 border-t border-slate-700 space-y-2">
+                             <button onClick={BatchImport} className="w-full bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded text-sm transition-colors">📋 批次匯入資料</button>
+                             <button onClick={ChangePwd} className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded text-sm transition-colors">🔒 修改密碼</button>
+                             <button onClick={ResetDB} className="w-full bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition-colors">初始化/重置資料庫</button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-grow p-8 overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-2">
+                                {activeTab === 'gallery' && viewingAlbum && <button onClick={() => setViewingAlbum(null)} className="text-blue-500 hover:underline">←</button>}
+                                {activeTab === 'gallery' && viewingAlbum ? viewingAlbum : TAB_NAMES[activeTab]}
+                            </h2>
+                            <button onClick={() => { setEditItem(viewingAlbum ? {title: viewingAlbum} : {}); setIsEditorOpen(true); }} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">+ 新增</button>
+                        </div>
+
+                        {loading ? <p>載入中...</p> : (
+                            <div className="bg-white rounded shadow p-6">
+                                {activeTab === 'gallery' && !viewingAlbum ? (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {Object.entries(albumGroups).map(([title, items]) => (
+                                            <div key={title} onClick={() => setViewingAlbum(title)} className="border rounded p-4 cursor-pointer hover:bg-blue-50 flex flex-col items-center text-center">
+                                                <FolderIcon />
+                                                <span className="font-bold">{title}</span>
+                                                <span className="text-xs text-gray-500">{items.length} 張</span>
+                                            </div>
+                                        ))}
+                                        {Object.keys(albumGroups).length === 0 && <p className="col-span-full text-center text-gray-400">尚無相簿</p>}
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-left">
+                                        <thead><tr className="border-b text-gray-500"><th className="p-3">標題 / 內容</th><th className="p-3">操作</th></tr></thead>
+                                        <tbody>
+                                            {displayList.map(item => (
+                                                <tr key={item.id} className="border-b hover:bg-gray-50">
+                                                    <td className="p-3">
+                                                        <div className="font-bold">{item.title || item.name}</div>
+                                                        <div className="text-xs text-gray-500 truncate max-w-md">{item.desc || item.research}</div>
+                                                        {(item.src || item.photo || item.image) && <span className="text-[10px] bg-green-100 text-green-800 px-1 rounded">IMG</span>}
+                                                    </td>
+                                                    <td className="p-3">
+                                                        <button onClick={() => { setEditItem(item); setIsEditorOpen(true); }} className="text-blue-600 mr-3">編輯</button>
+                                                        <button onClick={() => handleDelete(item.id)} className="text-red-600">刪除</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {displayList.length === 0 && <tr><td colSpan="2" className="p-4 text-center text-gray-400">無資料</td></tr>}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    
+                    {isEditorOpen && <EditorModal activeTab={activeTab} initData={editItem} onSave={handleSave} onBatchSave={handleBatchSave} onClose={() => setIsEditorOpen(false)} />}
+                    <ChangePasswordModal isOpen={isPwdModalOpen} onClose={() => setIsPwdModalOpen(false)} />
+                    <BatchImportModal isOpen={isBatchModalOpen} onClose={() => setIsBatchModalOpen(false)} activeTab={activeTab} onImport={handleBatchSave} />
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ErrorBoundary><AdminApp /></ErrorBoundary>);
+    </script>
+</body>
+</html>

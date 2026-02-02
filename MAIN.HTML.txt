@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧製造與半導體材料加工實驗室 (SMSMP Lab)</title>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 定義樣式與字型 -->
+    <style>
+        body { font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icon Components (替代 lucide-react，確保單一檔案可執行) ---
+        const IconBase = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+
+        const Menu = (props) => <IconBase {...props}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>;
+        const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+        const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+        const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const Calendar = (props) => <IconBase {...props}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></IconBase>;
+        const Mail = (props) => <IconBase {...props}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></IconBase>;
+        const MapPin = (props) => <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
+        const ChevronRight = (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>;
+        const Settings = (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const Cpu = (props) => <IconBase {...props}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>;
+        const Database = (props) => <IconBase {...props}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></IconBase>;
+        const Briefcase = (props) => <IconBase {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
+        const Filter = (props) => <IconBase {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></IconBase>;
+        const ArrowLeft = (props) => <IconBase {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconBase>;
+        const Home = (props) => <IconBase {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></IconBase>;
+        const Award = (props) => <IconBase {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></IconBase>;
+        const Lightbulb = (props) => <IconBase {...props}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .5 2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></IconBase>;
+        const GraduationCap = (props) => <IconBase {...props}><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></IconBase>;
+        const Star = (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>;
+        const Trophy = (props) => <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17"/><path d="M14 14.66V17"/><path d="M18 2h-4v7.33"/><path d="M10 2H6v7.33"/><path d="M9 22v-1.92a2.82 2.82 0 0 1-1.29-2.31c0-1.52 1.12-2.77 2.6-2.77H14c1.47 0 2.6 1.25 2.6 2.77a2.82 2.82 0 0 1-1.29 2.31V22"/></IconBase>;
+        const User = (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
+
+        // --- Main Application Component ---
+        const LabWebsite = () => {
+          const [currentPage, setCurrentPage] = useState('home'); // 'home' | 'projects' | 'members'
+          const [isMenuOpen, setIsMenuOpen] = useState(false);
+          const [projectFilter, setProjectFilter] = useState('all'); 
+          const [memberFilter, setMemberFilter] = useState('all'); // 'all' | 'phd' | '113' | '112' | 'alumni' ...
+
+          // --- 資料區塊 ---
+          const labInfo = {
+            name: "智慧製造與半導體材料加工實驗室",
+            englishName: "Smart Manufacturing & Semiconductor Material Processing Lab",
+            pi: "林岳鋒 博士 (Dr. Yan-Fa Lin)",
+            piTitle: "副教授兼副主任 | 機械工程系",
+            location: "國立勤益科技大學 機械館 4 樓",
+            email: "yflin@ncut.edu.tw",
+            phone: "04-23924505 分機 7173"
+          };
+
+          // [修改區] 最新消息 - 可新增圖片連結
+          // 圖片欄位為 'image'，若無圖片則留空或不寫該欄位
+          const news = [
+            { 
+              date: "2023-08-01", 
+              title: "執行教育部計畫：3D列印結合智慧製造創新教學，培育新世代人才。", 
+              tag: "Project",
+              image: "https://images.unsplash.com/photo-1631541909061-71e349d1f203?auto=format&fit=crop&q=80&w=800" // 範例：3D Printing
+            },
+            { 
+              date: "2022-05-20", 
+              title: "發表最新研究：複合式奈米高鹼性離子水環保型切削液開發。", 
+              tag: "Research",
+              image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800" // 範例：Industry/Lab
+            },
+            { 
+              date: "2021-12-02", 
+              title: "榮獲《天下Cheers雜誌》專訪：智慧機械人才培育成果備受肯定。", 
+              tag: "Interview",
+              // 沒有 image 欄位時，會顯示純文字樣式
+            },
+            { 
+              date: "2020-11-15", 
+              title: "指導學生參加「三菱電機CNC競賽」榮獲第一名殊榮！", 
+              tag: "Award",
+              image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=800" // 範例：Award/Team
+            },
+          ];
+
+          const researchAreas = [
+            {
+              title: "智慧製造與監控 (Smart Mfg)",
+              desc: "開發線上加工感測訊號即時分析系統，結合大數據資料庫探勘，實現診斷回朔控制與製程優化。",
+              icon: <Database className="w-8 h-8 text-blue-500" />
+            },
+            {
+              title: "精密加工技術 (Precision Machining)",
+              desc: "專注於創新高效能加工、研磨拋光技術開發，以及半導體 COF 封裝熱壓合精密陶瓷冶具之製程研究。",
+              icon: <Settings className="w-8 h-8 text-orange-500" />
+            },
+            {
+              title: "材料與刀具分析 (Material Analysis)",
+              desc: "研究材料機械性質、磨耗與刀具破損分析，並進行先進刀具鍍層設計開發。",
+              icon: <Cpu className="w-8 h-8 text-green-500" />
+            }
+          ];
+
+          const projects = [
+            {
+              id: 1,
+              type: "government",
+              year: "2022-2023",
+              title: "111年度教學實踐研究：3D列印結合智慧製造創新教學",
+              agency: "教育部",
+              role: "計畫主持人",
+              desc: "結合積層製造技術與智慧化監控系統，開發新型態工程實務課程，培育學生具備積層製造與智慧聯網之跨域能力。"
+            },
+            {
+              id: 2,
+              type: "government",
+              year: "2022-2023",
+              title: "111年產業學院：複合式奈米高鹼性離子水環保型切削液應用於航太材料加工應用精進師生實務職能方案",
+              agency: "教育部",
+              role: "計畫主持人",
+              desc: "針對航太難切削材料(Inconel, Titanium)，開發環保且高效的奈米離子水切削液配方與加工參數最佳化。"
+            },
+            {
+              id: 3,
+              type: "industry",
+              year: "2021",
+              title: "高平面度高耐用性國產 COF 封裝熱壓合精密陶瓷冶具熱變形模擬分析、導入超音波輔助加工製程",
+              agency: "玟揚精密工業股份有限公司",
+              role: "主持人",
+              desc: "透過有限元素分析(FEA)模擬熱壓合製程變形，並導入超音波輔助研磨技術提升陶瓷冶具精度，解決國產化關鍵技術瓶頸。"
+            },
+            {
+              id: 4,
+              type: "industry",
+              year: "2021",
+              title: "風力發電機轉向系統液壓制動器開發設計",
+              agency: "光隆精密工業股份有限公司",
+              role: "主持人",
+              desc: "協助開發風力發電機關鍵零組件，優化液壓制動器結構設計以提升耐用度與制動效能，符合國際風電安規標準。"
+            },
+            {
+              id: 5,
+              type: "industry",
+              year: "2020",
+              title: "奈米離子超淨水切削液機械加工效能試驗之研究",
+              agency: "安淨生物科技股份有限公司",
+              role: "主持人",
+              desc: "驗證奈米離子水在不同加工條件下的冷卻與潤滑效能，建立加工數據庫，推動綠色製造技術。"
+            },
+            {
+              id: 6,
+              type: "patent",
+              year: "2022/08",
+              title: "離岸風電之煞車卡鉗 (Brake Caliper for Offshore Wind Power)",
+              agency: "中華民國設計專利",
+              role: "專利權人/發明人",
+              desc: "證書號：D220752。針對離岸風機特殊環境需求設計之高耐候性煞車卡鉗結構。"
+            },
+            {
+              id: 7,
+              type: "patent",
+              year: "2022/05",
+              title: "離岸風電之煞車力道檢測裝置",
+              agency: "中華民國新型專利",
+              role: "專利權人/發明人",
+              desc: "證書號：M626894。開發一種可即時監測與回饋煞車力道的檢測裝置，提升風機運轉安全性。"
+            },
+            {
+              id: 8,
+              type: "patent",
+              year: "2021/10",
+              title: "自動擠膏拋光刀把",
+              agency: "中華民國發明專利",
+              role: "專利權人/發明人",
+              desc: "證書號：I742924。創新設計之拋光刀把，具備自動供給研磨膏功能，大幅提升自動化拋光效率與均勻度。"
+            },
+            {
+              id: 9,
+              type: "patent",
+              year: "2021/06",
+              title: "自動對刀裝置以及磨床",
+              agency: "中華民國新型專利",
+              role: "專利權人/發明人",
+              desc: "證書號：M612712。整合感測技術之自動對刀系統，可應用於精密磨床，縮短換刀與校正時間。"
+            },
+            {
+              id: 10,
+              type: "patent",
+              year: "2019/04",
+              title: "可調式定壓彈簧刀把",
+              agency: "中華民國發明專利",
+              role: "專利權人/發明人",
+              desc: "證書號：I656941。具備定壓浮動功能之刀把機構，適用於曲面工件之去毛邊與拋光製程。"
+            },
+            {
+              id: 11,
+              type: "competition",
+              year: "2020",
+              title: "三菱電機CNC智能機械創意開發競賽",
+              agency: "三菱電機",
+              role: "指導教授",
+              desc: "榮獲 冠軍 (First Prize)。指導學生開發高精度智能研磨模組，整合機聯網功能。"
+            },
+            {
+              id: 13,
+              type: "student_project",
+              year: "2023",
+              title: "大學部專題：基於深度學習之刀具磨耗檢測系統",
+              agency: "校內專題",
+              role: "指導老師",
+              desc: "利用 CNN 卷積神經網路分析加工聲音訊號，即時判斷刀具壽命。"
+            }
+          ];
+
+          // 擴充成員資料結構 - 加入 classYear 用於篩選
+          // type: 'phd' (博士生), 'master' (碩士生), 'alumni' (畢業校友)
+          // classYear: '112', '113' 等年度數字，用於自動生成篩選按鈕
+          const membersData = [
+            {
+              id: 'p1',
+              type: 'phd',
+              classYear: 'phd',
+              name: "陳建志",
+              title: "博士候選人 (PhD Candidate)",
+              year: "博三",
+              research: "Intelligent Spindle Monitoring & Vibrational Analysis",
+              researchDetail: "主要研究智慧主軸監控系統，透過振動訊號分析主軸健康狀態，並結合邊緣運算技術實現即時預警。",
+              email: "phd1@lab.ncut.edu.tw",
+              awards: [
+                "2022 精密機械與製造科技研討會 最佳論文獎",
+                "2021 全國智慧製造大數據分析競賽 銀牌"
+              ]
+            },
+            // 112 級碩士生
+            {
+              id: 'm1',
+              type: 'master',
+              classYear: '112', // 關鍵欄位：用於篩選 112 年度
+              name: "林語柔",
+              title: "碩士生 (Master Student)",
+              year: "碩二",
+              research: "Nano-fluid Cutting Fluid Optimization",
+              researchDetail: "探討奈米流體切削液在難切削材料加工中的應用，分析其冷卻與潤滑機制。",
+              email: "m2a@lab.ncut.edu.tw",
+              awards: [
+                "2023 上銀機械碩士論文獎 佳作"
+              ]
+            },
+            {
+              id: 'm2',
+              type: 'master',
+              classYear: '112',
+              name: "楊鎮遠",
+              title: "碩士生 (Master Student)",
+              year: "碩二",
+              research: "Tool Wear Prediction AI Model",
+              researchDetail: "開發基於深度學習的刀具磨耗預測模型，應用於航太零件加工產線。",
+              email: "m2b@lab.ncut.edu.tw",
+              awards: []
+            },
+            // 113 級碩士生
+            {
+              id: 'm3',
+              type: 'master',
+              classYear: '113', // 關鍵欄位：用於篩選 113 年度
+              name: "張志豪",
+              title: "碩士生 (Master Student)",
+              year: "碩一",
+              research: "CNC Vibrational Analysis",
+              researchDetail: "研究 CNC 工具機切削顫振現象，開發抑制顫振之控制策略。",
+              email: "m1a@lab.ncut.edu.tw",
+              awards: []
+            },
+            {
+              id: 'm4',
+              type: 'master',
+              classYear: '113',
+              name: "王心怡",
+              title: "碩士生 (Master Student)",
+              year: "碩一",
+              research: "Ceramic Fixture Design for Semiconductor",
+              researchDetail: "針對半導體封裝製程，設計高精度陶瓷冶具，減少熱變形影響。",
+              email: "m1b@lab.ncut.edu.tw",
+              awards: []
+            },
+            // [模板] 新增 114 級成員 (未來只要修改這裡)
+            // 複製下方區塊並修改內容，classYear 改為 '114'，網頁就會自動出現 "114級碩士" 的按鈕
+            /*
+            {
+              id: 'm_template',
+              type: 'master',
+              classYear: '114',
+              name: "[姓名]",
+              title: "碩士生 (Master Student)",
+              year: "碩一",
+              research: "[主要研究方向]",
+              researchDetail: "[詳細研究內容說明...]",
+              email: "student@lab.ncut.edu.tw",
+              awards: []
+            },
+            */
+            // 畢業校友範例
+            {
+              id: 'a1',
+              type: 'alumni',
+              classYear: 'alumni',
+              name: "王大明",
+              title: "畢業校友 (Alumni)",
+              year: "110級",
+              research: "Smart Grinding System",
+              researchDetail: "任職於台積電 (TSMC) 智慧製造工程師。",
+              email: "",
+              awards: ["2020 全國技能競賽 金牌"]
+            }
+          ];
+
+          const publications = [
+            { year: 2021, title: "運用虛實整合探討射出成型之最佳化參數設計與實務驗證", venue: "中國機械工程學會第三十八屆全國學術研討會", authors: "林岳鋒*, 温健宏, 羅元修, 嚴仕育" },
+            { year: 2022, title: "複合式奈米高鹼性離子水環保型切削液開發研究", venue: "精密機械與製造科技研討會", authors: "林岳鋒*, 林語柔, 楊鎮遠" },
+            { year: 2020, title: "Study on Machining Performance of Nano-Ion Super Clean Cutting Fluid", venue: "International Journal of Precision Engineering", authors: "Y.F. Lin*" },
+          ];
+
+          const handleNavClick = (target) => {
+            setIsMenuOpen(false);
+            
+            if (target === 'projects-page') {
+              setCurrentPage('projects');
+              window.scrollTo({ top: 0, behavior: 'auto' });
+            } else if (target === 'members-page') {
+              setCurrentPage('members');
+              window.scrollTo({ top: 0, behavior: 'auto' });
+            } else {
+              if (currentPage !== 'home') {
+                setCurrentPage('home');
+                setTimeout(() => {
+                  const element = document.getElementById(target);
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  else window.scrollTo({ top: 0, behavior: 'smooth' });
+                }, 100);
+              } else {
+                const element = document.getElementById(target);
+                if (element) element.scrollIntoView({ behavior: 'smooth' });
+                else window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }
+          };
+
+          const Navigation = () => (
+            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                  <div className="flex items-center space-x-2 cursor-pointer" onClick={() => handleNavClick('home')}>
+                    <Settings className="h-8 w-8 text-blue-700" />
+                    <div>
+                      <h1 className="text-xl font-bold text-slate-900 leading-none">SMSMP Lab</h1>
+                      <p className="text-xs text-slate-500">智慧製造與半導體材料加工實驗室</p>
+                    </div>
+                  </div>
+                  
+                  <div className="hidden md:flex space-x-8">
+                    <button onClick={() => handleNavClick('news')} className="text-slate-600 hover:text-blue-700 font-medium transition-colors">最新消息</button>
+                    <button onClick={() => handleNavClick('research')} className="text-slate-600 hover:text-blue-700 font-medium transition-colors">研究領域</button>
+                    <button onClick={() => handleNavClick('projects-page')} className={`font-medium transition-colors ${currentPage === 'projects' ? 'text-blue-700 font-bold' : 'text-slate-600 hover:text-blue-700'}`}>
+                      歷年計畫
+                    </button>
+                    <button onClick={() => handleNavClick('members-page')} className={`font-medium transition-colors ${currentPage === 'members' ? 'text-blue-700 font-bold' : 'text-slate-600 hover:text-blue-700'}`}>
+                      實驗室成員
+                    </button>
+                    <button onClick={() => handleNavClick('publications')} className="text-slate-600 hover:text-blue-700 font-medium transition-colors">發表論文</button>
+                    <button onClick={() => handleNavClick('join')} className="text-slate-600 hover:text-blue-700 font-medium transition-colors">加入我們</button>
+                  </div>
+
+                  <div className="md:hidden">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-slate-600">
+                      {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {isMenuOpen && (
+                <div className="md:hidden bg-white border-t border-slate-100 absolute w-full shadow-lg">
+                  <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                     <button onClick={() => handleNavClick('news')} className="block w-full text-left px-3 py-4 text-base font-medium text-slate-600 hover:bg-slate-50">最新消息</button>
+                     <button onClick={() => handleNavClick('research')} className="block w-full text-left px-3 py-4 text-base font-medium text-slate-600 hover:bg-slate-50">研究領域</button>
+                     <button onClick={() => handleNavClick('projects-page')} className="block w-full text-left px-3 py-4 text-base font-medium text-blue-700 bg-blue-50">歷年計畫</button>
+                     <button onClick={() => handleNavClick('members-page')} className="block w-full text-left px-3 py-4 text-base font-medium text-blue-700 bg-blue-50">實驗室成員</button>
+                     <button onClick={() => handleNavClick('publications')} className="block w-full text-left px-3 py-4 text-base font-medium text-slate-600 hover:bg-slate-50">發表論文</button>
+                     <button onClick={() => handleNavClick('join')} className="block w-full text-left px-3 py-4 text-base font-medium text-slate-600 hover:bg-slate-50">加入我們</button>
+                  </div>
+                </div>
+              )}
+            </nav>
+          );
+
+          const Footer = () => (
+            <footer className="bg-slate-50 border-t border-slate-200 py-12">
+              <div className="max-w-7xl mx-auto px-4 text-center">
+                <p className="font-bold text-slate-900 mb-2">{labInfo.name}</p>
+                <p className="text-slate-500 text-sm mb-4">{labInfo.englishName}</p>
+                <p className="text-slate-400 text-xs">© {new Date().getFullYear()} National Chin-Yi University of Technology. All Rights Reserved.</p>
+              </div>
+            </footer>
+          );
+
+          const HomeView = () => (
+            <React.Fragment>
+              <section id="home" className="relative bg-slate-900 text-white py-20 lg:py-32 overflow-hidden">
+                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 opacity-90"></div>
+                
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                  <div className="max-w-3xl">
+                    <div className="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-blue-300 uppercase bg-blue-900/50 rounded-full border border-blue-700">
+                      National Chin-Yi University of Technology
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 leading-tight">
+                      引領智慧製造與<br/>
+                      <span className="text-blue-400">半導體材料加工</span> 的創新
+                    </h1>
+                    <p className="text-xl text-slate-300 mb-8 font-light leading-relaxed">
+                      我們專注於將 AI 數據分析導入金屬切削、精密研磨與半導體製程。
+                      致力於解決產業實務痛點，培育具備實作能力的智慧機械人才。
+                    </p>
+                    <div className="flex flex-wrap gap-4">
+                      <button onClick={() => handleNavClick('research')} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all flex items-center">
+                        探索研究方向 <ChevronRight className="ml-2 w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleNavClick('projects-page')} className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold rounded-lg backdrop-blur-sm transition-all flex items-center">
+                        <Briefcase className="w-4 h-4 mr-2"/>
+                        查看歷年計畫
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section id="news" className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex items-center mb-8">
+                    <Calendar className="w-6 h-6 text-blue-700 mr-2" />
+                    <h2 className="text-2xl font-bold text-slate-900">實驗室動態</h2>
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* 改為 3 列佈局以適應圖片 */}
+                    {news.map((item, idx) => (
+                      <div key={idx} className="bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all overflow-hidden flex flex-col h-full">
+                        {item.image && (
+                          <div className="h-48 overflow-hidden relative group">
+                              <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          </div>
+                        )}
+                        <div className="p-6 flex flex-col flex-grow">
+                          <div className="flex justify-between items-start mb-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold 
+                              ${item.tag === 'Award' ? 'bg-yellow-100 text-yellow-800' : 
+                                item.tag === 'Project' ? 'bg-purple-100 text-purple-800' : 
+                                item.tag === 'Interview' ? 'bg-pink-100 text-pink-800' : 
+                                'bg-blue-100 text-blue-800'}`}>
+                              {item.tag}
+                            </span>
+                            <span className="text-sm text-slate-500 font-mono">{item.date}</span>
+                          </div>
+                          <h3 className="text-lg font-medium text-slate-800 leading-snug mb-2">{item.title}</h3>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section id="research" className="py-16 bg-slate-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold text-slate-900">研究領域</h2>
+                    <p className="mt-4 text-slate-600 max-w-2xl mx-auto">
+                      結合機械工程核心與智慧化技術，針對產業需求進行前瞻性研究。
+                    </p>
+                  </div>
+                  <div className="grid gap-8 md:grid-cols-3">
+                    {researchAreas.map((area, idx) => (
+                      <div key={idx} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border-b-4 border-blue-600 group">
+                        <div className="mb-6 p-4 bg-slate-100 rounded-full w-fit mx-auto group-hover:bg-blue-50 transition-colors">
+                          {area.icon}
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 text-center mb-4">{area.title}</h3>
+                        <p className="text-slate-600 text-center leading-relaxed">
+                          {area.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section id="members-preview" className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex justify-between items-end mb-8">
+                    <div>
+                      <h2 className="text-3xl font-bold text-slate-900 border-l-4 border-blue-700 pl-4">成員風采</h2>
+                      <p className="text-slate-500 mt-2 pl-5">我們擁有一群充滿熱情與創新能力的研究團隊</p>
+                    </div>
+                    <button onClick={() => handleNavClick('members-page')} className="text-blue-700 font-semibold hover:text-blue-900 flex items-center transition-colors">
+                      查看所有成員 <ChevronRight className="w-4 h-4 ml-1" />
+                    </button>
+                  </div>
+                  
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                     {membersData.slice(0, 4).map((member) => (
+                       <div key={member.id} className="bg-slate-50 p-6 rounded-xl border border-slate-100 text-center hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleNavClick('members-page')}>
+                         <div className="w-20 h-20 bg-slate-200 rounded-full mx-auto mb-4 flex items-center justify-center text-slate-400">
+                            <User className="w-10 h-10" />
+                         </div>
+                         <h3 className="font-bold text-slate-900">{member.name}</h3>
+                         <p className="text-sm text-slate-500 mb-2">{member.year}</p>
+                         <p className="text-xs text-blue-600 font-medium line-clamp-2">{member.research}</p>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+              </section>
+
+              <section id="publications" className="py-16 bg-slate-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex items-center mb-8">
+                    <FileText className="w-6 h-6 text-blue-700 mr-2" />
+                    <h2 className="text-2xl font-bold text-slate-900">發表論文</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {publications.map((pub, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-lg border-l-4 border-blue-600 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-4 items-start md:items-center">
+                         <div className="md:w-20 flex-shrink-0">
+                            <span className="inline-block px-3 py-1 bg-slate-100 text-slate-600 font-bold rounded text-sm">
+                              {pub.year}
+                            </span>
+                         </div>
+                         <div className="flex-grow">
+                           <h3 className="text-lg font-bold text-slate-900 mb-1">{pub.title}</h3>
+                           <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-slate-600 text-sm">{pub.authors}</span>
+                              <span className="hidden md:inline text-slate-300">|</span>
+                              <span className="text-blue-600 text-sm font-medium flex items-center">
+                                <BookOpen className="w-3 h-3 mr-1" />
+                                {pub.venue}
+                              </span>
+                           </div>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section id="join" className="py-16 bg-white">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 md:p-12 text-white shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -mr-16 -mt-16"></div>
+                    
+                    <div className="relative z-10 grid md:grid-cols-2 gap-12">
+                      <div>
+                        <h2 className="text-3xl font-bold mb-6">加入研究團隊</h2>
+                        <div className="text-slate-300 space-y-4 leading-relaxed">
+                          <p>
+                            我們歡迎對<strong>智慧製造、精密加工、機電整合</strong>有熱忱的同學加入。
+                            實驗室提供充足的研究資源與產學合作機會，讓你在學期間就能接觸業界實務。
+                          </p>
+                          <div className="bg-white/5 p-4 rounded-lg border border-white/10">
+                            <h4 className="font-bold text-blue-300 mb-2">招生對象：</h4>
+                            <ul className="list-disc ml-5 space-y-1 text-sm">
+                              <li>機械系碩士班甄試/考試生</li>
+                              <li>大學部專題生 (大二、大三)</li>
+                              <li>對 CNC 加工、AI 數據分析有興趣者尤佳</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col justify-center">
+                        <div className="bg-white/10 p-6 rounded-xl backdrop-blur-sm border border-white/10">
+                          <h3 className="text-xl font-bold mb-4 flex items-center text-white">
+                            <Mail className="mr-2 h-5 w-5" /> 聯絡方式
+                          </h3>
+                          <p className="mb-2 text-slate-300 text-sm">有意加入者，請準備簡歷 (CV) 與成績單寄至：</p>
+                          <a href={`mailto:${labInfo.email}`} className="block text-blue-300 font-mono text-lg mb-6 hover:text-blue-200 transition-colors">
+                            {labInfo.email}
+                          </a>
+                          
+                          <div className="space-y-2 text-sm text-slate-400">
+                            <div className="flex items-start">
+                              <MapPin className="w-5 h-5 mr-2 flex-shrink-0 text-slate-500" />
+                              <span>{labInfo.location}</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="w-5 h-5 mr-2 flex-shrink-0 flex items-center justify-center font-bold text-slate-500">T</span>
+                              <span>{labInfo.phone}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </React.Fragment>
+          );
+
+          const ProjectsView = () => {
+            const filteredProjects = projects.filter(p => {
+              if (projectFilter === 'all') return true;
+              return p.type === projectFilter;
+            });
+
+            return (
+              <div className="min-h-screen bg-slate-50 pb-20">
+                <div className="bg-slate-900 text-white pt-24 pb-12 px-4">
+                  <div className="max-w-7xl mx-auto px-4">
+                    <button 
+                      onClick={() => handleNavClick('home')}
+                      className="flex items-center text-blue-300 hover:text-white mb-6 transition-colors group"
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+                      返回首頁
+                    </button>
+                    <h1 className="text-3xl md:text-4xl font-bold flex items-center">
+                      <Briefcase className="w-10 h-10 mr-4 text-blue-500" />
+                      歷年研究計畫
+                    </h1>
+                    <p className="mt-4 text-slate-400 text-lg max-w-2xl">
+                      本實驗室長期致力於產學合作與前瞻技術研發，以下為歷年執行的教育部、國科會及業界合作計畫與專利成果。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="sticky top-16 z-30 bg-white border-b border-slate-200 shadow-sm">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center space-x-4 overflow-x-auto">
+                     <Filter className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                     <span className="text-sm font-bold text-slate-700 hidden sm:block">篩選類型：</span>
+                     <div className="flex space-x-2">
+                       <button onClick={() => setProjectFilter('all')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>全部顯示</button>
+                       <button onClick={() => setProjectFilter('government')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'government' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>教育部/國科會計畫</button>
+                       <button onClick={() => setProjectFilter('industry')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'industry' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>產學合作計畫</button>
+                       <button onClick={() => setProjectFilter('patent')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'patent' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>專利與技術創新</button>
+                       <button onClick={() => setProjectFilter('competition')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'competition' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>競賽獲獎</button>
+                       <button onClick={() => setProjectFilter('student_project')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'student_project' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>學生專題</button>
+                       <button onClick={() => setProjectFilter('other')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${projectFilter === 'other' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>其他成果</button>
+                     </div>
+                  </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                   <div className="grid gap-6">
+                     {filteredProjects.map((project) => (
+                       <div key={project.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 hover:shadow-md transition-shadow">
+                         <div className="flex flex-col md:flex-row gap-6">
+                            <div className="md:w-48 flex-shrink-0 flex flex-col items-start gap-3">
+                               <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider
+                                 ${project.type === 'government' ? 'bg-green-100 text-green-700' : 
+                                   project.type === 'industry' ? 'bg-orange-100 text-orange-700' : 
+                                   project.type === 'patent' ? 'bg-purple-100 text-purple-700' :
+                                   project.type === 'competition' ? 'bg-red-100 text-red-700' :
+                                   project.type === 'student_project' ? 'bg-teal-100 text-teal-700' :
+                                   'bg-gray-100 text-gray-700'}`}>
+                                 {project.type === 'government' ? 'Government' : 
+                                  project.type === 'industry' ? 'Industry' : 
+                                  project.type === 'patent' ? 'Patent' :
+                                  project.type === 'competition' ? 'Competition' :
+                                  project.type === 'student_project' ? 'Student Project' : 'Other'}
+                               </span>
+                               <div className="flex items-center text-slate-500 font-mono font-medium">
+                                 <Calendar className="w-4 h-4 mr-2" />
+                                 {project.year}
+                               </div>
+                            </div>
+
+                            <div className="flex-grow">
+                              <h3 className="text-xl font-bold text-slate-900 mb-3 leading-snug">
+                                {project.title}
+                              </h3>
+                              
+                              <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                                <span className="flex items-center font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-lg">
+                                  {project.type === 'patent' ? <Lightbulb className="w-4 h-4 mr-1.5" /> : 
+                                   project.type === 'competition' ? <Award className="w-4 h-4 mr-1.5" /> :
+                                   project.type === 'student_project' ? <GraduationCap className="w-4 h-4 mr-1.5" /> :
+                                   project.type === 'other' ? <Star className="w-4 h-4 mr-1.5" /> :
+                                   <Users className="w-4 h-4 mr-1.5" />}
+                                  {project.agency}
+                                </span>
+                                <span className="flex items-center text-slate-600 border border-slate-200 px-3 py-1 rounded-lg">
+                                  {project.role}
+                                </span>
+                              </div>
+
+                              {project.desc && (
+                                <p className="text-slate-600 leading-relaxed border-t border-slate-100 pt-4 mt-2">
+                                  {project.desc}
+                                </p>
+                              )}
+                            </div>
+                         </div>
+                       </div>
+                     ))}
+
+                     {filteredProjects.length === 0 && (
+                       <div className="text-center py-20 text-slate-400">
+                         <p>此類別目前尚無資料。</p>
+                       </div>
+                     )}
+                   </div>
+
+                   <div className="mt-12 text-center">
+                      <button onClick={() => handleNavClick('home')} className="inline-flex items-center px-6 py-3 border border-slate-300 shadow-sm text-base font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none">
+                        <Home className="w-5 h-5 mr-2 -ml-1 text-slate-500" />
+                        返回首頁
+                      </button>
+                   </div>
+                </div>
+              </div>
+            );
+          };
+
+          const MembersView = () => {
+            const masterYears = [...new Set(membersData
+              .filter(m => m.type === 'master' && m.classYear)
+              .map(m => m.classYear)
+            )].sort((a, b) => b - a);
+
+            const filteredMembers = membersData.filter(m => {
+               if (memberFilter === 'all') return true;
+               if (!['all', 'phd', 'alumni'].includes(memberFilter)) {
+                 return m.classYear === memberFilter;
+               }
+               return m.type === memberFilter;
+            });
+
+            return (
+              <div className="min-h-screen bg-slate-50 pb-20">
+                <div className="bg-slate-900 text-white pt-24 pb-12 px-4">
+                  <div className="max-w-7xl mx-auto px-4">
+                    <button 
+                      onClick={() => handleNavClick('home')}
+                      className="flex items-center text-blue-300 hover:text-white mb-6 transition-colors group"
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+                      返回首頁
+                    </button>
+                    <h1 className="text-3xl md:text-4xl font-bold flex items-center">
+                      <Users className="w-10 h-10 mr-4 text-blue-500" />
+                      實驗室成員
+                    </h1>
+                    <p className="mt-4 text-slate-400 text-lg max-w-2xl">
+                      認識我們充滿活力與熱情的研究團隊，我們來自不同背景，共同致力於智慧製造技術的創新。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="sticky top-16 z-30 bg-white border-b border-slate-200 shadow-sm">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center space-x-4 overflow-x-auto">
+                     <Filter className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                     <div className="flex space-x-2">
+                       <button onClick={() => setMemberFilter('all')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${memberFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>全部成員</button>
+                       <button onClick={() => setMemberFilter('phd')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${memberFilter === 'phd' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>博士生</button>
+                       
+                       {masterYears.map(year => (
+                         <button 
+                           key={year}
+                           onClick={() => setMemberFilter(year)} 
+                           className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${memberFilter === year ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                         >
+                           {year}級碩士
+                         </button>
+                       ))}
+
+                       <button onClick={() => setMemberFilter('alumni')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${memberFilter === 'alumni' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>畢業校友</button>
+                     </div>
+                  </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                  {memberFilter === 'all' && (
+                     <div className="mb-16">
+                       <h2 className="text-2xl font-bold text-slate-900 mb-8 border-l-4 border-blue-600 pl-4">指導教授</h2>
+                       <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8">
+                          <div className="w-48 h-48 bg-slate-200 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center border-4 border-slate-50 shadow-inner">
+                            <User className="w-24 h-24 text-slate-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-3xl font-bold text-slate-900 mb-2">{labInfo.pi}</h3>
+                            <p className="text-blue-700 font-medium text-lg mb-4">{labInfo.piTitle}</p>
+                            <p className="text-slate-600 mb-6 leading-relaxed max-w-3xl">
+                              林教授畢業於國立成功大學機械工程博士，現任勤益科大機械系副系主任。
+                              專長涵蓋精密製造、磨潤學及智慧監控系統。
+                              致力於將學術研究轉化為實際產業應用，帶領團隊進行前瞻性技術開發。
+                            </p>
+                            <div className="flex flex-wrap gap-4">
+                              <a href={`mailto:${labInfo.email}`} className="flex items-center text-slate-600 hover:text-blue-700 transition-colors bg-slate-50 px-4 py-2 rounded-lg">
+                                <Mail className="w-4 h-4 mr-2"/> {labInfo.email}
+                              </a>
+                              <div className="flex items-center text-slate-600 bg-slate-50 px-4 py-2 rounded-lg">
+                                <MapPin className="w-4 h-4 mr-2"/> {labInfo.location}
+                              </div>
+                            </div>
+                          </div>
+                       </div>
+                     </div>
+                  )}
+
+                  <h2 className="text-2xl font-bold text-slate-900 mb-8 border-l-4 border-blue-600 pl-4">
+                    {memberFilter === 'all' ? '研究團隊' : 
+                     memberFilter === 'phd' ? '博士生' : 
+                     memberFilter === 'alumni' ? '畢業校友' : 
+                     `${memberFilter}級 碩士生`}
+                  </h2>
+                  <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredMembers.map((member) => (
+                      <div key={member.id} className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200 hover:shadow-lg transition-all group flex flex-col h-full">
+                        <div className="p-6 text-center border-b border-slate-100 bg-slate-50/50">
+                           <div className="w-32 h-32 bg-white rounded-full mx-auto mb-4 flex items-center justify-center text-slate-300 border-4 border-white shadow-sm overflow-hidden relative">
+                              <User className="w-16 h-16" />
+                           </div>
+                           <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
+                           <p className="text-slate-500 font-medium">{member.year}</p>
+                           <p className="text-xs text-blue-600 mt-1 uppercase tracking-wide">{member.title}</p>
+                        </div>
+                        
+                        <div className="p-6 flex-grow flex flex-col">
+                           <div className="mb-4">
+                             <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center">
+                               <Lightbulb className="w-4 h-4 mr-1.5 text-blue-500" /> 主要研究
+                             </h4>
+                             <p className="text-sm text-slate-600 leading-relaxed">
+                               {member.researchDetail}
+                             </p>
+                           </div>
+                           
+                           {member.awards && member.awards.length > 0 && (
+                             <div className="mt-auto pt-4 border-t border-slate-100">
+                                <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center">
+                                  <Trophy className="w-4 h-4 mr-1.5 text-yellow-500" /> 獲獎紀錄
+                                </h4>
+                                <ul className="text-sm text-slate-600 space-y-1">
+                                  {member.awards.map((award, idx) => (
+                                    <li key={idx} className="flex items-start">
+                                      <span className="mr-1.5 text-slate-400">•</span>
+                                      <span>{award}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                             </div>
+                           )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {filteredMembers.length === 0 && (
+                     <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                       目前尚無此類別成員資料。
+                     </div>
+                  )}
+
+                  <div className="mt-12 text-center">
+                     <button onClick={() => handleNavClick('home')} className="inline-flex items-center px-6 py-3 border border-slate-300 shadow-sm text-base font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none">
+                       <Home className="w-5 h-5 mr-2 -ml-1 text-slate-500" />
+                       返回首頁
+                     </button>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+              <Navigation />
+              {currentPage === 'home' && <HomeView />}
+              {currentPage === 'projects' && <ProjectsView />}
+              {currentPage === 'members' && <MembersView />}
+              <Footer />
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LabWebsite />);
+    </script>
+</body>
+</html>
