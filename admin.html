@@ -15,7 +15,6 @@
     <!-- 1. Fallback Logic -->
     <script>
         window.isLocal = true;
-        // Same helper to check size for local storage
         const checkQuota = (data) => {
             try { if (JSON.stringify(data).length > 4500000) throw new Error("本機儲存空間已滿 (5MB)。請切換至 Supabase 雲端模式。"); } catch(e) { throw e; }
         };
@@ -73,9 +72,34 @@
 
     <!-- 2. Supabase Logic -->
     <script type="module">
-        // ★★★ 設定區 ★★★
         const supabaseUrl = "https://uyvyxkrikmdyypppqsdt.supabase.co"; 
         const supabaseKey = "sb_publishable_AR5cKUsnsxgFRcC1rDCWlQ_mYRrxVUC"; 
+
+        // SQL 建表指令 (錯誤時提示用)
+        const SETUP_SQL = `
+-- 請複製以下 SQL 指令並在 Supabase SQL Editor 執行：
+create table if not exists lab_content (
+  id uuid default gen_random_uuid() primary key,
+  created_at timestamp with time zone default now(),
+  collection text not null,
+  data jsonb not null
+);
+
+alter table lab_content enable row level security;
+create policy "Allow All Access" on lab_content for all using (true) with check (true);
+-------------------------------------------------------
+`;
+
+        const handleError = (error) => {
+            console.error("Supabase Error:", error);
+            if (error.code === 'PGRST205') {
+                alert("⚠️ 資料庫錯誤：找不到資料表 'lab_content'。\n\n請打開瀏覽器 Console (F12)，複製我幫您準備好的 SQL 指令，並到 Supabase SQL Editor 執行。");
+                console.log("%c▼▼▼ 請複製以下 SQL 指令並到 Supabase 執行 ▼▼▼", "color: yellow; font-size: 16px; font-weight: bold;");
+                console.log(SETUP_SQL);
+                return [];
+            }
+            throw error;
+        };
 
         try {
             if (supabaseKey.includes("請在此填入")) {
@@ -90,14 +114,13 @@
                     onAuth: (cb) => { cb({ uid: 'supabase-admin' }); return () => {}; },
                     
                     fetch: async (colName) => {
-                        // Fetch latest 100 items for admin to keep it fast
                         const { data, error } = await _supabase
                             .from('lab_content')
                             .select('id, data')
                             .eq('collection', colName)
                             .order('created_at', { ascending: false })
                             .limit(100);
-                        if (error) throw error;
+                        if (error) return handleError(error);
                         return data.map(row => ({ id: row.id, ...row.data }));
                     },
                     
@@ -105,17 +128,15 @@
                         const { error } = await _supabase
                             .from('lab_content')
                             .insert({ collection: colName, data: { ...data, createdAt: Date.now() } });
-                        if (error) throw error;
+                        if (error) handleError(error);
                     },
                     
                     update: async (colName, id, data) => {
-                        // We assume 'data' is the full object.
-                        // For a real app, merging is better, but this suffices for admin replacement.
                         const { error } = await _supabase
                             .from('lab_content')
                             .update({ data: { ...data } })
                             .eq('id', id);
-                        if (error) throw error;
+                        if (error) handleError(error);
                     },
                     
                     delete: async (colName, id) => {
@@ -123,7 +144,7 @@
                             .from('lab_content')
                             .delete()
                             .eq('id', id);
-                        if (error) throw error;
+                        if (error) handleError(error);
                     },
                     
                     batchAdd: async (colName, items) => {
@@ -132,22 +153,29 @@
                             data: { ...item, createdAt: item.createdAt || Date.now() }
                         }));
                         const { error } = await _supabase.from('lab_content').insert(rows);
-                        if (error) throw error;
+                        if (error) handleError(error);
                     },
 
                     initDefaults: async (defaultData) => {
                         for (const [key, items] of Object.entries(defaultData)) {
-                            const { count } = await _supabase
+                            // Check count first to avoid duplicates
+                            const { count, error } = await _supabase
                                 .from('lab_content')
                                 .select('*', { count: 'exact', head: true })
                                 .eq('collection', key);
+                            
+                            if (error) {
+                                handleError(error);
+                                return;
+                            }
                             
                             if (count === 0) {
                                 const rows = items.map((item, idx) => ({
                                     collection: key,
                                     data: { ...item, id: `init_${idx}`, createdAt: Date.now() - idx * 1000 }
                                 }));
-                                await _supabase.from('lab_content').insert(rows);
+                                const { error: insertError } = await _supabase.from('lab_content').insert(rows);
+                                if (insertError) handleError(insertError);
                             }
                         }
                     }
@@ -172,7 +200,7 @@
 
         const getCredentials = () => ({ username: localStorage.getItem('smsmp_admin_user') || 'Yflin', password: localStorage.getItem('smsmp_admin_pass') || '0701' });
 
-        // ★★★ Real Data from uploaded file ★★★
+        // ★★★ Real Data ★★★
         const defaultData = {
             news: [
                 { date: "2025-11-06", title: "114年 台灣精密工程學會‧東台集團【精密工程專題與論文獎】，榮獲研究論文獎佳作", tag: "Award" },
@@ -213,7 +241,6 @@
             publications: []
         };
         
-        // ... (Include all React Components: LoginForm, EditorModal, AdminApp from previous admin.html) ...
         const TAB_NAMES = { news: '最新消息', projects: '歷年計畫', members: '成員管理', publications: '發表論文', gallery: '生活寫真' };
         
         const FolderIcon = () => (
@@ -657,11 +684,8 @@
             };
 
             const handleBatchSave = async (items) => {
-                try {
-                    await window.dbOps.batchAdd(activeTab, items);
-                    loadData();
-                    return true;
-                } catch(e) { alert("批次儲存失敗"); return false; }
+                try { await window.dbOps.batchAdd(activeTab, items); loadData(); return true; } 
+                catch(e) { alert("批次儲存失敗"); return false; }
             };
 
             const handleDelete = async (id) => {
