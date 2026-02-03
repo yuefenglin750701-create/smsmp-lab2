@@ -67,6 +67,12 @@
             </svg>
         );
 
+        const HomeIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        );
+
         // --- 編輯彈窗元件 ---
         const EditorModal = ({ activeTab, initData, onSave, onBatchSave, onClose }) => {
             const [formData, setFormData] = useState({ ...initData });
@@ -260,12 +266,12 @@
             return (
                 <div className="min-h-screen flex bg-slate-50">
                     {/* 側邊導覽 */}
-                    <aside className="w-72 bg-slate-900 text-white p-8 flex-shrink-0 shadow-2xl z-10 text-nowrap">
+                    <aside className="w-72 bg-slate-900 text-white p-8 flex-shrink-0 shadow-2xl z-10 text-nowrap flex flex-col">
                         <div className="mb-12">
                             <h1 className="text-2xl font-black text-blue-400 tracking-tighter">SMSMP LAB</h1>
                             <p className="text-slate-500 text-xs mt-1 uppercase font-bold tracking-widest">Control Panel</p>
                         </div>
-                        <nav className="space-y-2">
+                        <nav className="space-y-2 flex-grow">
                             {Object.entries(TAB_NAMES).map(([key, label]) => (
                                 <button key={key} onClick={() => { setTab(key); setViewingAlbum(null); }} 
                                         className={`w-full text-left px-5 py-4 rounded-2xl transition-all duration-200 font-medium flex items-center gap-3 ${tab===key ? 'bg-blue-600 shadow-xl shadow-blue-900/50 scale-105' : 'hover:bg-slate-800 text-slate-400'}`}>
@@ -273,6 +279,14 @@
                                     {label}
                                 </button>
                             ))}
+                            
+                            {/* 返回前台按鈕 */}
+                            <div className="pt-6">
+                                <a href="./index.html" className="w-full text-left px-5 py-4 rounded-2xl transition-all duration-200 font-bold flex items-center bg-blue-900/30 text-blue-400 border border-blue-700/50 hover:bg-blue-800 hover:text-white group">
+                                    <HomeIcon />
+                                    返回前台網頁
+                                </a>
+                            </div>
                         </nav>
                         <div className="mt-20 pt-8 border-t border-slate-800">
                              <button onClick={() => window.location.reload()} className="text-xs text-slate-600 hover:text-slate-400 transition-colors">登出系統</button>
