@@ -61,7 +61,7 @@
                         const MAX = 800;
                         let w = img.width, h = img.height;
                         if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-                        else { if (h > MAX) { width *= MAX / h; h = MAX; } }
+                        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
                         canvas.width = w; canvas.height = h;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, w, h);
@@ -82,8 +82,8 @@
                 else setErr('帳號或密碼錯誤');
             };
             return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-                    <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm">
+                <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4 font-sans">
+                    <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm border border-slate-200">
                         <div className="text-center mb-8">
                             <h2 className="text-2xl font-bold text-slate-800">SMSMP Lab 後台</h2>
                             <p className="text-slate-400 text-sm mt-2">管理系統登入</p>
@@ -103,7 +103,6 @@
         const ChangePasswordModal = ({ isOpen, onClose }) => {
             const [oldUser, setOldUser] = useState('');
             const [oldPass, setOldPass] = useState('');
-            const [newUser, setNewUser] = useState('');
             const [newPass, setNewPass] = useState('');
             const [confirmPass, setConfirmPass] = useState('');
             const [msg, setMsg] = useState({ type: '', text: '' });
@@ -111,20 +110,22 @@
             const handleSubmit = (e) => {
                 e.preventDefault();
                 const current = getCredentials();
+                // 驗證目前的帳號與密碼
                 if (oldUser !== current.username || oldPass !== current.password) {
-                    setMsg({ type: 'error', text: '目前的帳號或密碼錯誤' });
+                    setMsg({ type: 'error', text: '驗證失敗：目前的帳號或密碼錯誤' });
                     return;
                 }
                 if (newPass !== confirmPass) {
                     setMsg({ type: 'error', text: '新密碼與確認密碼不符' });
                     return;
                 }
-                if (newPass.length < 4 || newUser.length < 3) {
-                    setMsg({ type: 'error', text: '帳號至少3碼，密碼至少4碼' });
+                if (newPass.length < 4) {
+                    setMsg({ type: 'error', text: '新密碼長度至少需 4 碼' });
                     return;
                 }
-                updateCredentials(newUser, newPass);
-                setMsg({ type: 'success', text: '修改成功！即將重新整理...' });
+                // 只更新密碼，帳號保持不變
+                updateCredentials(current.username, newPass);
+                setMsg({ type: 'success', text: '密碼修改成功！即將重新登入...' });
                 setTimeout(() => window.location.reload(), 1500);
             };
 
@@ -133,21 +134,28 @@
             return (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
-                        <h3 className="text-2xl font-bold mb-6 text-slate-800">🔒 修改管理帳密</h3>
-                        {msg.text && <div className={`p-4 mb-6 rounded-xl text-sm ${msg.type==='error'?'bg-red-50 text-red-600':'bg-green-50 text-green-600'}`}>{msg.text}</div>}
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="bg-slate-50 p-4 rounded-2xl border">
-                                <input type="text" placeholder="目前的帳號" value={oldUser} onChange={e => setOldUser(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm" required />
-                                <input type="password" placeholder="目前的密碼" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full border p-3 rounded-lg text-sm" required />
+                        <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+                            🔒 修改管理密碼
+                        </h3>
+                        {msg.text && (
+                            <div className={`p-4 mb-6 rounded-xl text-sm font-medium ${msg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                {msg.text}
                             </div>
-                            <div className="bg-blue-50 p-4 rounded-2xl border">
-                                <input type="text" placeholder="新的帳號" value={newUser} onChange={e => setNewUser(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm" required />
-                                <input type="password" placeholder="新的密碼" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm" required />
-                                <input type="password" placeholder="確認新密碼" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full border p-3 rounded-lg text-sm" required />
+                        )}
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">身分驗證</label>
+                                <input type="text" placeholder="目前的帳號 (yflin)" value={oldUser} onChange={e => setOldUser(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
+                                <input type="password" placeholder="目前的密碼" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full border p-3 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
+                            </div>
+                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                                <label className="block text-xs font-bold text-blue-400 mb-2 uppercase tracking-wider">設定新密碼</label>
+                                <input type="password" placeholder="輸入新密碼" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
+                                <input type="password" placeholder="再次確認新密碼" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full border p-3 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
                             </div>
                             <div className="flex justify-end gap-3 mt-8">
-                                <button type="button" onClick={onClose} className="px-6 py-3 border rounded-xl font-bold">取消</button>
-                                <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold">儲存</button>
+                                <button type="button" onClick={onClose} className="px-6 py-3 border rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
+                                <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">儲存新密碼</button>
                             </div>
                         </form>
                     </div>
@@ -162,6 +170,7 @@
 
             useEffect(() => {
                 if (activeTab === 'gallery') setGalleryImages(initData.src ? [{src: initData.src}] : []);
+                if (activeTab === 'members' && !initData.pdfs) setFormData(p => ({...p, pdfs: []}));
             }, [initData, activeTab]);
 
             const handleFile = async (e) => {
@@ -193,23 +202,23 @@
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative my-auto">
                         <h3 className="text-2xl font-bold mb-6 text-slate-800">{formData.id ? '編輯' : '新增'}{TAB_NAMES[activeTab]}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <input required placeholder="名稱/標題" value={formData.title || formData.name || ''} onChange={e=>setFormData({...formData, [activeTab==='members'?'name':'title']:e.target.value})} className="w-full border p-3 rounded-lg" />
-                            {activeTab === 'news' && <input type="date" value={formData.date||''} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full border p-3 rounded-lg" />}
+                            <input required placeholder="名稱/標題" value={formData.title || formData.name || ''} onChange={e=>setFormData({...formData, [activeTab==='members'?'name':'title']:e.target.value})} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                            {activeTab === 'news' && <input type="date" value={formData.date||''} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />}
                             {activeTab === 'members' && (
                                 <div className="grid grid-cols-2 gap-4">
-                                    <select value={formData.type||'master'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border p-3 rounded-lg">
+                                    <select value={formData.type||'master'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                                         <option value="pi">指導教授</option><option value="phd">博士生</option><option value="master">碩士生</option><option value="alumni">畢業校友</option>
                                     </select>
-                                    <input placeholder="年級/級別" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border p-3 rounded-lg" />
+                                    <input placeholder="年級/級別" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                             )}
                             <div>
-                                <label className="block text-sm font-bold mb-1">圖片上傳</label>
+                                <label className="block text-sm font-bold mb-1 text-slate-700">圖片上傳 (自動壓縮)</label>
                                 <input type="file" multiple={activeTab==='gallery'} accept="image/*" onChange={handleFile} className="w-full text-sm" />
                             </div>
                             <div className="flex justify-end gap-3 pt-6 border-t">
-                                <button type="button" onClick={onClose} className="px-6 py-2 border rounded-lg">取消</button>
-                                <button type="submit" disabled={isSaving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">
+                                <button type="button" onClick={onClose} className="px-6 py-2 border rounded-lg font-bold text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
+                                <button type="submit" disabled={isSaving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-all">
                                     {isSaving ? '處理中...' : '儲存資料'}
                                 </button>
                             </div>
@@ -256,7 +265,7 @@
             };
 
             const handleDelete = async (id) => {
-                if (confirm('確定刪除？')) {
+                if (confirm('確定要刪除這筆資料嗎？')) {
                     await supabase.from('lab_content').delete().eq('id', id);
                     loadData();
                 }
@@ -265,49 +274,53 @@
             if (!isLoggedIn) return <LoginForm onLogin={() => setIsLoggedIn(true)} />;
 
             return (
-                <div className="min-h-screen flex bg-slate-50">
+                <div className="min-h-screen flex bg-slate-50 font-sans">
                     <aside className="w-72 bg-slate-900 text-white p-8 flex-shrink-0 shadow-2xl flex flex-col">
                         <div className="mb-12">
-                            <h1 className="text-2xl font-black text-blue-400">SMSMP LAB</h1>
-                            <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">Control Panel</p>
+                            <h1 className="text-2xl font-black text-blue-400 tracking-tighter">SMSMP LAB</h1>
+                            <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">Admin Control</p>
                         </div>
                         <nav className="space-y-2 flex-grow">
                             {Object.entries(TAB_NAMES).map(([key, label]) => (
                                 <button key={key} onClick={() => setTab(key)} 
-                                        className={`w-full text-left px-5 py-4 rounded-2xl transition-all ${tab===key ? 'bg-blue-600 shadow-xl' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                        className={`w-full text-left px-5 py-4 rounded-2xl transition-all font-medium flex items-center gap-3 ${tab===key ? 'bg-blue-600 shadow-xl scale-105' : 'hover:bg-slate-800 text-slate-400'}`}>
                                     {label}
                                 </button>
                             ))}
-                            <div className="mt-8 pt-8 border-t border-slate-800 space-y-2">
-                                <button onClick={() => setIsPwdModalOpen(true)} className="w-full text-left px-5 py-4 rounded-2xl font-bold text-blue-400 border border-blue-900/50 hover:bg-blue-900/30">🔒 修改帳號密碼</button>
-                                <a href="./index.html" className="w-full text-left px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-800 flex items-center gap-2">🏠 返回前台網頁</a>
+                            <div className="mt-8 pt-8 border-t border-slate-800 space-y-3">
+                                <button onClick={() => setIsPwdModalOpen(true)} className="w-full text-left px-5 py-4 rounded-2xl font-bold text-blue-400 border border-blue-900/50 hover:bg-blue-900/30 transition-all flex items-center gap-2">
+                                    🔒 修改密碼
+                                </button>
+                                <a href="./index.html" className="w-full text-left px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-800 transition-all flex items-center gap-2">
+                                    🏠 返回前台網頁
+                                </a>
                             </div>
                         </nav>
-                        <button onClick={() => window.location.reload()} className="mt-20 pt-8 border-t border-slate-800 text-xs text-slate-600 font-bold">登出系統</button>
+                        <button onClick={() => window.location.reload()} className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-600 font-bold hover:text-slate-400 transition-colors text-left">登出系統</button>
                     </aside>
                     
                     <main className="flex-grow p-12 overflow-y-auto">
                         <header className="flex justify-between items-end mb-10">
-                            <h2 className="text-4xl font-bold text-slate-800">{TAB_NAMES[tab]}</h2>
+                            <div><h2 className="text-4xl font-bold text-slate-800">{TAB_NAMES[tab]}</h2><p className="text-slate-400 mt-2">管理實驗室網站內容</p></div>
                             <button onClick={() => setEditing({})} className="bg-green-600 text-white px-8 py-4 rounded-2xl shadow-xl hover:bg-green-700 font-bold transition-all">+ 新增資料</button>
                         </header>
 
                         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-slate-50 border-b"><tr className="text-slate-500 text-sm"><th className="p-6 text-left">內容</th><th className="p-6 text-right">管理</th></tr></thead>
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 border-b"><tr className="text-slate-500 text-sm"><th className="p-6 font-bold">內容描述</th><th className="p-6 text-right font-bold">管理操作</th></tr></thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {dataList.map(item => (
-                                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="p-6 font-bold text-slate-800">{item.title || item.name}</td>
                                             <td className="p-6 text-right space-x-4">
-                                                <button onClick={() => setEditing(item)} className="text-blue-600 font-bold">編輯</button>
-                                                <button onClick={() => handleDelete(item.id)} className="text-red-400 font-bold">刪除</button>
+                                                <button onClick={() => setEditing(item)} className="text-blue-600 font-bold hover:underline">編輯</button>
+                                                <button onClick={() => handleDelete(item.id)} className="text-red-400 font-bold hover:underline">刪除</button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            {dataList.length === 0 && <div className="p-20 text-center text-slate-300">無資料</div>}
+                            {dataList.length === 0 && <div className="p-20 text-center text-slate-300 font-medium">目前沒有資料，點擊右上角按鈕新增。</div>}
                         </div>
                     </main>
                     {editing && <EditorModal activeTab={tab} initData={editing} onSave={handleSave} onBatchSave={handleBatchSave} onClose={() => setEditing(null)} />}
@@ -317,10 +330,18 @@
         };
 
         // 確保 DOM 已載入並掛載 React
-        const container = document.getElementById('root');
-        if (container) {
-            const root = ReactDOM.createRoot(container);
-            root.render(<AdminApp />);
+        const startApp = () => {
+            const container = document.getElementById('root');
+            if (container) {
+                const root = ReactDOM.createRoot(container);
+                root.render(<AdminApp />);
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startApp);
+        } else {
+            startApp();
         }
     </script>
 </body>
