@@ -19,13 +19,12 @@
     </style>
 </head>
 <body class="bg-slate-100">
-    <!-- 確保 root div 在腳本執行前已存在 -->
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- 全域定義 ---
+        // --- 設定區 ---
         const TAB_NAMES = { 
             news: '最新消息', 
             projects: '歷年計畫', 
@@ -37,7 +36,7 @@
         const supabaseUrl = "https://uyvyxkrikmdyypppqsdt.supabase.co"; 
         const supabaseKey = "sb_publishable_AR5cKUsnsxgFRcC1rDCWlQ_mYRrxVUC"; 
 
-        // --- Auth Helpers ---
+        // --- 帳密 Helper ---
         const getCredentials = () => ({ 
             username: localStorage.getItem('smsmp_admin_user') || 'yflin', 
             password: localStorage.getItem('smsmp_admin_pass') || '0701' 
@@ -71,6 +70,7 @@
             });
         };
 
+        // --- 登入介面 ---
         const LoginForm = ({ onLogin }) => {
             const [u, setU] = useState('');
             const [p, setP] = useState('');
@@ -83,25 +83,27 @@
             };
             return (
                 <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4 font-sans">
-                    <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm border border-slate-200">
+                    <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm border border-slate-200">
                         <div className="text-center mb-8">
-                            <h2 className="text-2xl font-bold text-slate-800">SMSMP Lab 後台</h2>
-                            <p className="text-slate-400 text-sm mt-2">管理系統登入</p>
+                            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">SMSMP Lab 後台</h2>
+                            <p className="text-slate-400 text-sm mt-2">請登入系統以進行管理</p>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <input className="w-full border p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="帳號" value={u} onChange={e=>setU(e.target.value)} required />
-                            <input className="w-full border p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" type="password" placeholder="密碼" value={p} onChange={e=>setP(e.target.value)} required />
-                            {err && <p className="text-red-500 text-center text-sm font-medium">{err}</p>}
-                            <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">登入系統</button>
+                            <input className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none transition-colors" placeholder="管理帳號" value={u} onChange={e=>setU(e.target.value)} required />
+                            <input className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none transition-colors" type="password" placeholder="管理密碼" value={p} onChange={e=>setP(e.target.value)} required />
+                            {err && <p className="text-red-500 text-center text-sm font-bold bg-red-50 py-2 rounded-xl">{err}</p>}
+                            <button className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 active:scale-95">進入管理系統</button>
                         </form>
-                        <p className="mt-8 text-center text-slate-300 text-xs">預設帳號：yflin / 密碼：0701</p>
                     </div>
                 </div>
             );
         };
 
+        // --- 修改密碼視窗 ---
         const ChangePasswordModal = ({ isOpen, onClose }) => {
-            const [oldUser, setOldUser] = useState('');
             const [oldPass, setOldPass] = useState('');
             const [newPass, setNewPass] = useState('');
             const [confirmPass, setConfirmPass] = useState('');
@@ -110,22 +112,16 @@
             const handleSubmit = (e) => {
                 e.preventDefault();
                 const current = getCredentials();
-                // 驗證目前的帳號與密碼
-                if (oldUser !== current.username || oldPass !== current.password) {
-                    setMsg({ type: 'error', text: '驗證失敗：目前的帳號或密碼錯誤' });
+                if (oldPass !== current.password) {
+                    setMsg({ type: 'error', text: '舊密碼驗證失敗' });
                     return;
                 }
                 if (newPass !== confirmPass) {
                     setMsg({ type: 'error', text: '新密碼與確認密碼不符' });
                     return;
                 }
-                if (newPass.length < 4) {
-                    setMsg({ type: 'error', text: '新密碼長度至少需 4 碼' });
-                    return;
-                }
-                // 只更新密碼，帳號保持不變
                 updateCredentials(current.username, newPass);
-                setMsg({ type: 'success', text: '密碼修改成功！即將重新登入...' });
+                setMsg({ type: 'success', text: '修改成功！即將登出...' });
                 setTimeout(() => window.location.reload(), 1500);
             };
 
@@ -133,29 +129,22 @@
 
             return (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
-                        <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-                            🔒 修改管理密碼
-                        </h3>
-                        {msg.text && (
-                            <div className={`p-4 mb-6 rounded-xl text-sm font-medium ${msg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                                {msg.text}
-                            </div>
-                        )}
+                    <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md p-8">
+                        <h3 className="text-2xl font-black mb-6 text-slate-800 flex items-center gap-2">🔒 修改管理密碼</h3>
+                        {msg.text && <div className={`p-4 mb-6 rounded-2xl text-sm font-bold ${msg.type==='error'?'bg-red-50 text-red-600':'bg-green-50 text-green-600'}`}>{msg.text}</div>}
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">身分驗證</label>
-                                <input type="text" placeholder="目前的帳號 (yflin)" value={oldUser} onChange={e => setOldUser(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
-                                <input type="password" placeholder="目前的密碼" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full border p-3 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase">驗證當前身分</label>
+                                <input type="password" placeholder="請輸入舊密碼" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full border-2 border-white p-3 rounded-xl mb-3 focus:border-blue-300 outline-none" required />
                             </div>
-                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                                <label className="block text-xs font-bold text-blue-400 mb-2 uppercase tracking-wider">設定新密碼</label>
-                                <input type="password" placeholder="輸入新密碼" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full border p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
-                                <input type="password" placeholder="再次確認新密碼" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full border p-3 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required />
+                            <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                                <label className="block text-xs font-bold text-blue-400 mb-2 uppercase">設定新密碼</label>
+                                <input type="password" placeholder="輸入新密碼" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full border-2 border-white p-3 rounded-xl mb-3 focus:border-blue-300 outline-none" required />
+                                <input type="password" placeholder="再次確認新密碼" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full border-2 border-white p-3 rounded-xl focus:border-blue-300 outline-none" required />
                             </div>
                             <div className="flex justify-end gap-3 mt-8">
-                                <button type="button" onClick={onClose} className="px-6 py-3 border rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
-                                <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">儲存新密碼</button>
+                                <button type="button" onClick={onClose} className="px-6 py-3 border rounded-xl font-bold">取消</button>
+                                <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black">儲存變更</button>
                             </div>
                         </form>
                     </div>
@@ -163,15 +152,11 @@
             );
         };
 
+        // --- 編輯視窗 ---
         const EditorModal = ({ activeTab, initData, onSave, onBatchSave, onClose }) => {
             const [formData, setFormData] = useState({ ...initData });
             const [galleryImages, setGalleryImages] = useState([]);
             const [isSaving, setIsSaving] = useState(false);
-
-            useEffect(() => {
-                if (activeTab === 'gallery') setGalleryImages(initData.src ? [{src: initData.src}] : []);
-                if (activeTab === 'members' && !initData.pdfs) setFormData(p => ({...p, pdfs: []}));
-            }, [initData, activeTab]);
 
             const handleFile = async (e) => {
                 const files = Array.from(e.target.files);
@@ -199,27 +184,90 @@
 
             return (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative my-auto">
-                        <h3 className="text-2xl font-bold mb-6 text-slate-800">{formData.id ? '編輯' : '新增'}{TAB_NAMES[activeTab]}</h3>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <input required placeholder="名稱/標題" value={formData.title || formData.name || ''} onChange={e=>setFormData({...formData, [activeTab==='members'?'name':'title']:e.target.value})} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                            {activeTab === 'news' && <input type="date" value={formData.date||''} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />}
-                            {activeTab === 'members' && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <select value={formData.type||'master'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <option value="pi">指導教授</option><option value="phd">博士生</option><option value="master">碩士生</option><option value="alumni">畢業校友</option>
-                                    </select>
-                                    <input placeholder="年級/級別" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl p-10 relative my-auto">
+                        <h3 className="text-3xl font-black mb-8 text-slate-800">{formData.id ? '編輯' : '新增'}{TAB_NAMES[activeTab]}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">主要名稱 / 標題</label>
+                                <input required value={formData.title || formData.name || ''} onChange={e=>setFormData({...formData, [activeTab==='members'?'name':'title']:e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none" placeholder="請輸入內容..." />
+                            </div>
+
+                            {activeTab === 'projects' && (
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="col-span-2 md:col-span-1">
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">計畫日期 (行事曆)</label>
+                                        <input 
+                                            type="date" 
+                                            required 
+                                            value={formData.fullDate || ''} 
+                                            onChange={e => {
+                                                const d = e.target.value;
+                                                const y = d ? (new Date(d).getFullYear() - 1911) : '';
+                                                setFormData({...formData, fullDate: d, year: y.toString()});
+                                            }}
+                                            className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none" 
+                                        />
+                                    </div>
+                                    <div className="col-span-2 md:col-span-1">
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">計畫類型標籤</label>
+                                        <select 
+                                            value={formData.type || 'government'} 
+                                            onChange={e=>setFormData({...formData, type:e.target.value})}
+                                            className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none"
+                                        >
+                                            <option value="government">國科會 / 教育部計畫</option>
+                                            <option value="industry">產學合作計畫</option>
+                                            <option value="research">一般研究計畫</option>
+                                            <option value="other">其他項目</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <input placeholder="委託 / 補助單位" value={formData.agency||''} onChange={e=>setFormData({...formData, agency:e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <input placeholder="主持人 / 角色" value={formData.role||''} onChange={e=>setFormData({...formData, role:e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl focus:border-blue-500 outline-none" />
+                                    </div>
                                 </div>
                             )}
-                            <div>
-                                <label className="block text-sm font-bold mb-1 text-slate-700">圖片上傳 (自動壓縮)</label>
-                                <input type="file" multiple={activeTab==='gallery'} accept="image/*" onChange={handleFile} className="w-full text-sm" />
-                            </div>
-                            <div className="flex justify-end gap-3 pt-6 border-t">
-                                <button type="button" onClick={onClose} className="px-6 py-2 border rounded-lg font-bold text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
-                                <button type="submit" disabled={isSaving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-all">
-                                    {isSaving ? '處理中...' : '儲存資料'}
+
+                            {activeTab === 'news' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="date" value={formData.date||''} onChange={e=>setFormData({...formData, date:e.target.value})} className="border-2 border-slate-100 p-4 rounded-2xl" />
+                                    <select value={formData.tag||'Activity'} onChange={e=>setFormData({...formData, tag:e.target.value})} className="border-2 border-slate-100 p-4 rounded-2xl">
+                                        <option value="Activity">一般動態</option>
+                                        <option value="Award">榮譽獲獎</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            {activeTab === 'members' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <select value={formData.type||'master'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border-2 border-slate-100 p-4 rounded-2xl">
+                                        <option value="pi">指導教授</option><option value="phd">博士生</option><option value="master">碩士生</option><option value="alumni">畢業校友</option>
+                                    </select>
+                                    <input placeholder="年級 (如：碩一)" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border-2 border-slate-100 p-4 rounded-2xl" />
+                                    <textarea placeholder="詳細研究內容..." value={formData.researchDetail||''} onChange={e=>setFormData({...formData, researchDetail:e.target.value})} className="border-2 border-slate-100 p-4 rounded-2xl col-span-2 h-24" />
+                                </div>
+                            )}
+
+                            {/* 只有當不是歷年計畫時，才顯示圖片上傳 */}
+                            {activeTab !== 'projects' && (
+                                <div>
+                                    <label className="block text-sm font-bold mb-2 text-slate-700">圖片上傳 (自動壓縮處理)</label>
+                                    <input type="file" multiple={activeTab==='gallery'} accept="image/*" onChange={handleFile} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                                    <div className="flex gap-2 mt-4 overflow-x-auto p-2">
+                                        {(activeTab === 'gallery' ? galleryImages : [{src: formData.photo || formData.image}]).map((img, i) => img.src && (
+                                            <img key={i} src={img.src} className="w-20 h-20 object-cover rounded-xl border border-slate-200" />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-8 border-t">
+                                <button type="button" onClick={onClose} className="px-8 py-3 border-2 rounded-2xl font-bold text-slate-500 hover:bg-slate-50">取消</button>
+                                <button type="submit" disabled={isSaving} className="px-8 py-3 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 shadow-xl shadow-blue-100 disabled:opacity-50">
+                                    {isSaving ? '儲存中...' : '確認儲存'}
                                 </button>
                             </div>
                         </form>
@@ -265,7 +313,7 @@
             };
 
             const handleDelete = async (id) => {
-                if (confirm('確定要刪除這筆資料嗎？')) {
+                if (confirm('確定要永久刪除此筆資料嗎？')) {
                     await supabase.from('lab_content').delete().eq('id', id);
                     loadData();
                 }
@@ -275,52 +323,55 @@
 
             return (
                 <div className="min-h-screen flex bg-slate-50 font-sans">
-                    <aside className="w-72 bg-slate-900 text-white p-8 flex-shrink-0 shadow-2xl flex flex-col">
+                    <aside className="w-80 bg-slate-900 text-white p-10 flex-shrink-0 shadow-2xl flex flex-col">
                         <div className="mb-12">
                             <h1 className="text-2xl font-black text-blue-400 tracking-tighter">SMSMP LAB</h1>
-                            <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">Admin Control</p>
+                            <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">Administrator</p>
                         </div>
                         <nav className="space-y-2 flex-grow">
                             {Object.entries(TAB_NAMES).map(([key, label]) => (
-                                <button key={key} onClick={() => setTab(key)} 
-                                        className={`w-full text-left px-5 py-4 rounded-2xl transition-all font-medium flex items-center gap-3 ${tab===key ? 'bg-blue-600 shadow-xl scale-105' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                <button key={key} onClick={() => { setTab(key); }} 
+                                        className={`w-full text-left px-6 py-4 rounded-3xl transition-all font-bold flex items-center gap-3 ${tab===key ? 'bg-blue-600 shadow-xl shadow-blue-900/50 scale-105' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${tab===key ? 'bg-white' : 'bg-transparent'}`}></div>
                                     {label}
                                 </button>
                             ))}
-                            <div className="mt-8 pt-8 border-t border-slate-800 space-y-3">
-                                <button onClick={() => setIsPwdModalOpen(true)} className="w-full text-left px-5 py-4 rounded-2xl font-bold text-blue-400 border border-blue-900/50 hover:bg-blue-900/30 transition-all flex items-center gap-2">
-                                    🔒 修改密碼
-                                </button>
-                                <a href="./index.html" className="w-full text-left px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-800 transition-all flex items-center gap-2">
-                                    🏠 返回前台網頁
-                                </a>
+                            <div className="mt-10 pt-10 border-t border-slate-800 space-y-4">
+                                <button onClick={() => setIsPwdModalOpen(true)} className="w-full text-left px-6 py-4 rounded-3xl font-bold text-blue-400 border-2 border-blue-900/30 hover:bg-blue-900/20 transition-all">🔒 修改管理密碼</button>
+                                <a href="./index.html" className="w-full text-left px-6 py-4 rounded-3xl font-bold text-slate-400 hover:bg-slate-800 transition-all flex items-center gap-2">🏠 返回前台網頁</a>
                             </div>
                         </nav>
-                        <button onClick={() => window.location.reload()} className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-600 font-bold hover:text-slate-400 transition-colors text-left">登出系統</button>
+                        <button onClick={() => window.location.reload()} className="mt-8 pt-6 border-t border-slate-800 text-xs text-slate-600 font-bold hover:text-slate-400 transition-colors">登出系統</button>
                     </aside>
                     
                     <main className="flex-grow p-12 overflow-y-auto">
-                        <header className="flex justify-between items-end mb-10">
-                            <div><h2 className="text-4xl font-bold text-slate-800">{TAB_NAMES[tab]}</h2><p className="text-slate-400 mt-2">管理實驗室網站內容</p></div>
-                            <button onClick={() => setEditing({})} className="bg-green-600 text-white px-8 py-4 rounded-2xl shadow-xl hover:bg-green-700 font-bold transition-all">+ 新增資料</button>
+                        <header className="flex justify-between items-end mb-12">
+                            <div><h2 className="text-5xl font-black text-slate-800">{TAB_NAMES[tab]}</h2><p className="text-slate-400 mt-3 font-medium">您可以透過下方列表管理實驗室的網站內容。</p></div>
+                            <button onClick={() => setEditing({})} className="bg-blue-600 text-white px-10 py-5 rounded-3xl shadow-2xl shadow-blue-200 hover:bg-blue-700 font-black transition-all active:scale-95">+ 新增{TAB_NAMES[tab]}</button>
                         </header>
 
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 overflow-hidden">
                             <table className="w-full text-left">
-                                <thead className="bg-slate-50 border-b"><tr className="text-slate-500 text-sm"><th className="p-6 font-bold">內容描述</th><th className="p-6 text-right font-bold">管理操作</th></tr></thead>
+                                <thead className="bg-slate-50 border-b"><tr className="text-slate-500 text-xs uppercase font-black tracking-widest"><th className="p-8">內容描述</th><th className="p-8 text-right">管理操作</th></tr></thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {dataList.map(item => (
-                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="p-6 font-bold text-slate-800">{item.title || item.name}</td>
-                                            <td className="p-6 text-right space-x-4">
-                                                <button onClick={() => setEditing(item)} className="text-blue-600 font-bold hover:underline">編輯</button>
-                                                <button onClick={() => handleDelete(item.id)} className="text-red-400 font-bold hover:underline">刪除</button>
+                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                                            <td className="p-8">
+                                                <div className="font-black text-slate-800 text-lg">{item.title || item.name}</div>
+                                                <div className="text-xs text-slate-400 font-bold mt-1 flex gap-3 uppercase tracking-tighter">
+                                                    <span>{item.year || item.date || '----'}</span>
+                                                    <span className="text-blue-500">{item.type || item.tag || 'Regular'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-8 text-right space-x-6">
+                                                <button onClick={() => setEditing(item)} className="text-blue-600 font-black hover:underline underline-offset-4">編輯</button>
+                                                <button onClick={() => handleDelete(item.id)} className="text-red-400 font-bold hover:underline underline-offset-4">刪除</button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            {dataList.length === 0 && <div className="p-20 text-center text-slate-300 font-medium">目前沒有資料，點擊右上角按鈕新增。</div>}
+                            {dataList.length === 0 && <div className="p-20 text-center text-slate-300 font-bold">目前暫無資料</div>}
                         </div>
                     </main>
                     {editing && <EditorModal activeTab={tab} initData={editing} onSave={handleSave} onBatchSave={handleBatchSave} onClose={() => setEditing(null)} />}
@@ -329,19 +380,10 @@
             );
         };
 
-        // 確保 DOM 已載入並掛載 React
-        const startApp = () => {
-            const container = document.getElementById('root');
-            if (container) {
-                const root = ReactDOM.createRoot(container);
-                root.render(<AdminApp />);
-            }
-        };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', startApp);
-        } else {
-            startApp();
+        // --- 啟動函式 ---
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+            ReactDOM.createRoot(rootElement).render(<AdminApp />);
         }
     </script>
 </body>
