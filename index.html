@@ -53,7 +53,7 @@
                             .select('id, data')
                             .eq('collection', colName)
                             .order('created_at', { ascending: false })
-                            .limit(100) 
+                            .limit(500) 
                             .then(({ data, error }) => {
                                 if (error) console.error("Supabase fetch error:", error);
                                 else {
@@ -92,7 +92,7 @@
         .fade-in-text { animation: fadeIn 1.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- 族譜樹狀圖核心樣式 --- */
+        /* --- 族譜樹狀圖樣式 --- */
         .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: flex; justify-content: center; width: max-content; min-width: 100%; margin: 0 auto; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: all 0.5s; }
         .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #cbd5e1; width: 50%; height: 20px; }
@@ -107,11 +107,12 @@
         .tree-card { 
             border: 2px solid #e2e8f0; padding: 10px 15px; display: inline-block; border-radius: 12px; transition: all 0.3s; 
             background: white; min-width: 110px; position: relative; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
         }
         .tree-card:hover { border-color: #3b82f6; background: #f8fafc; transform: scale(1.05) translateY(-5px); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2); z-index: 20; }
         .tree-card.pi { border-color: #2563eb; background: #eff6ff; font-weight: bold; }
-        .tree-card.category { border-style: dashed; background: #f1f5f9; font-weight: bold; }
-        .tree-card.grade { border-color: #94a3b8; background: #ffffff; color: #475569; font-size: 0.75rem; }
+        .tree-card.category { border-style: dashed; background: #f1f5f9; font-weight: bold; cursor: default; }
+        .tree-card.grade { border-color: #94a3b8; background: #ffffff; color: #475569; font-size: 0.75rem; cursor: default; }
 
         .goog-te-banner-frame.skiptranslate { display: none !important; } body { top: 0px !important; } #google_translate_element { display: none; }
     </style>
@@ -133,6 +134,7 @@
         const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
         const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
         const ArrowLeft = (props) => <IconBase {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconBase>;
+        const ArrowRight = (props) => <IconBase {...props}><path d="m12 5 7 7-7 7"/><path d="M5 12h14"/></IconBase>;
         const Grid = (props) => <IconBase {...props}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></IconBase>;
         const Network = (props) => (
             <IconBase {...props}>
@@ -150,6 +152,10 @@
         const ChevronRight = (props) => <IconBase {...props}><polyline points="9 18 15 12 9 6" /></IconBase>;
         const Clock = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>;
         const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const Trophy = (props) => <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17"/><path d="M14 14.66V17"/><path d="M18 2h-4v7.33"/><path d="M10 2H6v7.33"/><path d="M9 22v-1.92a2.82 2.82 0 0 1-1.29-2.31c0-1.52 1.12-2.77 2.6-2.77H14c1.47 0 2.6 1.25 2.6 2.77a2.82 2.82 0 0 1-1.29 2.31V22"/></IconBase>;
+        const Lightbulb = (props) => <IconBase {...props}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .5 2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></IconBase>;
+        const Mail = (props) => <IconBase {...props}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></IconBase>;
+        const FileIcon = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>;
 
         // --- Common Components ---
         const RevealSection = ({ children, className = "", id = "" }) => {
@@ -165,35 +171,108 @@
             return <div ref={domRef} id={id} className={`reveal-section ${isVisible ? 'is-visible' : ''} ${className}`}>{children}</div>;
         };
 
-        const Footer = () => (
-            <footer className="bg-white border-t border-slate-200 py-12">
-                <div className="max-w-7xl mx-auto px-6 text-center text-slate-500 text-sm">
-                    <p className="font-bold text-slate-900 mb-2">國立勤益科技大學 機械工程系</p>
-                    <p>智慧製造與半導體材料加工實驗室 (SMSMP Lab)</p>
-                    <p className="mt-4">© {new Date().getFullYear()} National Chin-Yi University of Technology. All Rights Reserved. 
-                        <a href="./admin.html" className="ml-2 text-slate-300 hover:text-slate-500 transition-colors underline">管理登入</a>
-                    </p>
+        const openDataUrl = (dataUrl) => {
+            try {
+                if (dataUrl.startsWith('data:application/pdf')) {
+                    const arr = dataUrl.split(',');
+                    const mime = arr[0].match(/:(.*?);/)[1];
+                    const bstr = atob(arr[1]);
+                    let n = bstr.length;
+                    const u8arr = new Uint8Array(n);
+                    while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+                    const file = new Blob([u8arr], {type:mime});
+                    const fileURL = URL.createObjectURL(file);
+                    window.open(fileURL, '_blank');
+                } else {
+                    window.open(dataUrl, '_blank');
+                }
+            } catch (e) {
+                window.open(dataUrl, '_blank'); 
+            }
+        };
+
+        // 通用分頁組件
+        const Pagination = ({ current, total, onPageChange }) => {
+            if (total <= 1) return null;
+            const pages = Array.from({ length: total }, (_, i) => i + 1);
+            return (
+                <div className="flex justify-center items-center gap-2 mt-12 py-8">
+                    <button onClick={() => onPageChange(Math.max(1, current - 1))} disabled={current === 1} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 transition-all shadow-sm">
+                        <ArrowLeft className="w-5 h-5"/>
+                    </button>
+                    <div className="flex gap-2">
+                        {pages.map(p => (
+                            <button key={p} onClick={() => onPageChange(p)} className={`w-12 h-12 rounded-2xl font-black transition-all shadow-sm ${current === p ? 'bg-blue-600 text-white shadow-blue-200 scale-110' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={() => onPageChange(Math.min(total, current + 1))} disabled={current === total} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 transition-all shadow-sm">
+                        <ArrowRight className="w-5 h-5"/>
+                    </button>
                 </div>
-            </footer>
-        );
+            );
+        };
 
         const MemberDetailModal = ({ member, onClose }) => {
             if (!member) return null;
+            const handleSecureAccess = (url) => {
+                const pwd = prompt("請輸入存取密碼：");
+                if (pwd === "77173") openDataUrl(url);
+                else if (pwd !== null) alert("密碼錯誤，無法開啟檔案。");
+            };
             return (
                 <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-                    <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl relative animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"><X /></button>
-                        <div className="flex flex-col items-center text-center">
-                            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-slate-100 mb-4">
-                                {member.photo ? <img src={member.photo} className="w-full h-full object-cover" /> : <UserIcon className="w-full h-full p-6 text-slate-300" />}
+                    <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+                        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X /></button>
+                        <div className="p-8">
+                            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start mb-8">
+                                <div className="w-40 h-40 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 flex-shrink-0">
+                                    {member.photo ? <img src={member.photo} alt={member.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300"><UserIcon className="w-16 h-16" /></div>}
+                                </div>
+                                <div className="text-center md:text-left">
+                                    <h3 className="text-3xl font-black text-slate-900 mb-2">{member.name}</h3>
+                                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
+                                        <span className="px-3 py-1 bg-blue-600 text-white text-xs font-black rounded-full uppercase tracking-wider">
+                                            {member.type === 'pi' ? '指導教授' : member.type === 'phd' ? '博士生' : member.type === 'master' ? '碩士生' : '畢業校友'}
+                                        </span>
+                                        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full uppercase tracking-wider">
+                                            {member.year || (member.classYear ? member.classYear + '級' : '研究成員')}
+                                        </span>
+                                    </div>
+                                    {member.email && <div className="flex items-center gap-2 text-slate-500 text-sm hover:text-blue-600 transition-colors"><Mail className="w-4 h-4" /> {member.email}</div>}
+                                </div>
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-900">{member.name}</h3>
-                            <p className="text-blue-600 font-bold mb-4 uppercase tracking-wider text-sm">
-                                {member.type === 'pi' ? '指導教授' : (member.year || (member.classYear ? member.classYear + '級' : '成員'))}
-                            </p>
-                            <div className="w-full text-left bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2">研究內容</h4>
-                                <p className="text-slate-600 text-sm leading-relaxed">{member.researchDetail || member.research || "尚無詳細資料。"}</p>
+                            
+                            <div className="space-y-6">
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                    <h4 className="font-black text-slate-800 mb-3 flex items-center gap-2 text-lg"><Lightbulb className="w-5 h-5 text-blue-500" /> 研究領域與內容</h4>
+                                    <p className="text-slate-600 leading-relaxed">{member.researchDetail || member.research || "尚無詳細資料。"}</p>
+                                </div>
+
+                                {member.awards && (
+                                    <div className="bg-yellow-50/50 p-6 rounded-2xl border border-yellow-100">
+                                        <h4 className="font-black text-slate-800 mb-3 flex items-center gap-2 text-lg"><Trophy className="w-5 h-5 text-yellow-500" /> 獲獎與榮譽</h4>
+                                        <p className="text-slate-600 whitespace-pre-line leading-relaxed">{member.awards}</p>
+                                    </div>
+                                )}
+
+                                {member.pdfs && member.pdfs.length > 0 && (
+                                    <div>
+                                        <h4 className="font-black text-slate-800 mb-3 flex items-center gap-2 text-lg"><BookOpen className="w-5 h-5 text-green-500" /> 相關文獻資料</h4>
+                                        <div className="grid gap-3">
+                                            {member.pdfs.map((pdf, idx) => (
+                                                <button key={idx} onClick={() => handleSecureAccess(pdf.url)} className="flex items-center p-4 rounded-xl border-2 border-slate-50 hover:border-blue-100 hover:bg-blue-50 transition-all group w-full text-left bg-white">
+                                                    <div className="bg-red-50 p-2 rounded-lg text-red-500 mr-4 group-hover:bg-red-100 transition-colors"><FileIcon className="w-5 h-5" /></div>
+                                                    <div>
+                                                        <span className="font-black text-slate-700 group-hover:text-blue-700 block transition-colors">{pdf.title}</span>
+                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">點擊存取文件 (密碼保護)</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -201,12 +280,31 @@
             );
         };
 
+        const Footer = () => (
+            <footer className="bg-white border-t border-slate-200 py-16">
+                <div className="max-w-7xl mx-auto px-6 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <Settings className="w-6 h-6 text-blue-600" />
+                        <span className="text-xl font-black text-slate-900 tracking-tighter">SMSMP Lab</span>
+                    </div>
+                    <p className="font-bold text-slate-500 text-sm mb-2">國立勤益科技大學 機械工程系</p>
+                    <p className="text-slate-400 text-xs">智慧製造與半導體材料加工實驗室</p>
+                    <div className="mt-8 pt-8 border-t border-slate-100">
+                        <p className="text-slate-300 text-[10px] uppercase font-bold tracking-[0.2em]">
+                            © {new Date().getFullYear()} National Chin-Yi University of Technology. 
+                            <a href="./admin.html" className="ml-4 hover:text-blue-500 transition-colors underline">Admin Portal</a>
+                        </p>
+                    </div>
+                </div>
+            </footer>
+        );
+
         // --- Main App ---
         const LabWebsite = () => {
           const [currentPage, setCurrentPage] = useState('home'); 
           const [isMenuOpen, setIsMenuOpen] = useState(false);
           const [selectedMember, setSelectedMember] = useState(null);
-          const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'tree'
+          const [viewMode, setViewMode] = useState('cards'); 
           const [news, setNews] = useState([]);
           const [projects, setProjects] = useState([]);
           const [membersData, setMembersData] = useState([]);
@@ -214,314 +312,224 @@
           const [publications, setPublications] = useState([]);
           const [loading, setLoading] = useState(true);
 
-          const labInfo = {
-            pi: "林岳鋒 博士 (Dr. Yan-Fa Lin)",
-            location: "國立勤益科技大學 機械館 4 樓",
-            email: "yflin@ncut.edu.tw",
-            phone: "04-23924505 #7173"
-          };
-
-          const researchAreas = [
-            { title: "智慧製造與監控 (Smart Mfg)", desc: "開發線上加工感測訊號即時分析系統，結合大數據資料庫探勘，實現診斷回朔控制與製程優化。", icon: <Database className="w-8 h-8 text-blue-500" /> },
-            { title: "精密加工技術 (Precision Machining)", desc: "專注於創新高效能加工、研磨拋光技術開發，以及半導體 COF 封裝熱壓合精密陶瓷冶具之製程研究。", icon: <Settings className="w-8 h-8 text-orange-500" /> },
-            { title: "材料與刀具分析 (Material Analysis)", desc: "研究材料機械性質、磨耗與刀具破損分析，並進行先進刀具鍍層設計開發。", icon: <Cpu className="w-8 h-8 text-green-500" /> }
-          ];
+          // 分頁狀態
+          const [newsPage, setNewsPage] = useState(1);
+          const [projectsPage, setProjectsPage] = useState(1);
+          const [membersPage, setMembersPage] = useState(1);
+          const [pubsPage, setPubsPage] = useState(1);
+          const [galleryPage, setGalleryPage] = useState(1);
+          const itemsPerPage = 10;
 
           useEffect(() => {
             const collections = ['news', 'projects', 'members', 'gallery', 'publications'];
             const setters = [setNews, setProjects, setMembersData, setGalleryImages, setPublications];
-            
-            collections.forEach((colName, index) => {
-                window.dataOps.subscribe(colName, (list) => {
-                    setters[index](list);
-                    if(index === collections.length - 1) setLoading(false);
-                });
-            });
+            collections.forEach((col, i) => window.dataOps.subscribe(col, (list) => {
+                setters[i](list);
+                if (i === collections.length - 1) setLoading(false);
+            }));
           }, []);
 
           const handleNavClick = (target) => {
             setIsMenuOpen(false);
-            const pageMap = { 'projects-page': 'projects', 'members-page': 'members', 'gallery-page': 'gallery', 'publications-page': 'publications', 'research-page': 'research' };
+            const pageMap = { 
+                'news-page': 'news', 'projects-page': 'projects', 'members-page': 'members', 
+                'gallery-page': 'gallery', 'publications-page': 'publications', 'research-page': 'research' 
+            };
             if (pageMap[target]) {
                 setCurrentPage(pageMap[target]);
                 window.scrollTo({ top: 0, behavior: 'auto' });
             } else {
-                if (currentPage !== 'home') { setCurrentPage('home'); setTimeout(() => { const el = document.getElementById(target); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 100); } 
-                else { const el = document.getElementById(target); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+                setCurrentPage('home');
+                setTimeout(() => {
+                    const el = document.getElementById(target);
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
             }
           };
 
           const Navigation = () => (
             <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transition-all duration-300">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => handleNavClick('home')}>
-                    <Settings className="h-8 w-8 text-blue-700" />
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 leading-none">SMSMP Lab</h1>
-                        <p className="text-xs text-slate-500 tracking-tighter">智慧製造與半導體材料加工實驗室</p>
+                <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+                    <div className="flex items-center gap-2 font-bold text-xl cursor-pointer" onClick={() => handleNavClick('home')}>
+                        <Settings className="w-8 h-8 text-blue-600" />
+                        <div>
+                            <h1 className="text-xl font-black text-slate-900 leading-none tracking-tighter">SMSMP Lab</h1>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-tighter hidden md:block">Smart Mfg & Semiconductor Lab</p>
+                        </div>
                     </div>
-                    </div>
-                    <div className="hidden md:flex space-x-8 items-center">
-                    {['news:最新消息', 'research-page:研究領域', 'projects-page:歷年計畫', 'members-page:實驗室成員', 'publications-page:發表論文', 'gallery-page:生活寫真'].map(item => {
-                        const [key, label] = item.split(':');
-                        return <button key={key} onClick={() => handleNavClick(key)} className="text-slate-600 hover:text-blue-700 font-medium transition-colors">{label}</button>
-                    })}
+                    <div className="hidden md:flex gap-8 text-xs font-black text-slate-600">
+                        {['news-page:最新消息', 'research-page:研究領域', 'projects-page:歷年計畫', 'members-page:實驗室成員', 'publications-page:發表論文', 'gallery-page:生活寫真'].map(item => {
+                            const [key, label] = item.split(':');
+                            return <button key={key} onClick={() => handleNavClick(key)} className="hover:text-blue-600 transition-colors uppercase tracking-widest">{label}</button>
+                        })}
                     </div>
                     <div className="md:hidden">
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-slate-600">{isMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">{isMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
                     </div>
                 </div>
-                </div>
+                {isMenuOpen && (
+                    <div className="md:hidden bg-white border-t border-slate-100 shadow-xl p-4 flex flex-col gap-2">
+                        {['news-page:最新消息', 'research-page:研究領域', 'projects-page:歷年計畫', 'members-page:實驗室成員', 'publications-page:發表論文', 'gallery-page:生活寫真'].map(item => {
+                            const [key, label] = item.split(':');
+                            return <button key={key} onClick={() => handleNavClick(key)} className="p-4 text-left font-black text-slate-700 hover:bg-slate-50 rounded-xl transition-colors">{label}</button>
+                        })}
+                    </div>
+                )}
             </nav>
           );
 
           const HomeView = () => (
-            <React.Fragment>
-              <section id="home" className="relative bg-slate-900 text-white py-20 lg:py-40 overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                    <img src="image_01fe36.png" alt="Laboratory Background" className="w-full h-full object-cover opacity-40" onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.style.backgroundColor = '#1e3a8a'; }} />
-                    <div className="absolute inset-0 bg-slate-900/70 mix-blend-multiply"></div>
-                </div>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center md:text-left">
+            <>
+              <section id="home" className="relative bg-slate-900 text-white py-32 lg:py-48 overflow-hidden">
+                <div className="absolute inset-0 z-0"><img src="image_01fe36.png" className="w-full h-full object-cover opacity-40" /><div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-slate-900/40"></div></div>
+                <div className="max-w-7xl mx-auto px-4 relative z-10 text-center md:text-left">
                     <div className="max-w-4xl fade-in-text">
-                        <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-blue-300 uppercase bg-blue-900/50 rounded-full border border-blue-700">National Chin-Yi University of Technology</div>
-                        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight">引領智慧製造與<br/>半導體材料加工的創新</h1>
-                        <p className="text-xl text-slate-200 mb-10 font-light leading-relaxed max-w-2xl mx-auto md:mx-0">我們專注於將 AI 數據分析導入金屬切削、精密研磨與半導體製程。致力於解決產業實務痛點，培育具備實作能力的智慧機械人才。</p>
-                        <div className="flex gap-4 justify-center md:justify-start">
-                            <button onClick={() => handleNavClick('members-page')} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full shadow-lg transition-all flex items-center gap-2">認識團隊成員 <ChevronRight className="w-4 h-4" /></button>
-                        </div>
+                        <div className="inline-block px-3 py-1 mb-6 text-[10px] font-black tracking-widest text-blue-300 uppercase bg-blue-900/50 rounded-full border border-blue-700">National Chin-Yi University of Technology</div>
+                        <h1 className="text-4xl md:text-7xl font-black mb-8 leading-tight">引領智慧製造與<br/>半導體材料加工的創新</h1>
+                        <p className="text-lg md:text-xl text-slate-200 mb-12 font-light leading-relaxed max-w-2xl mx-auto md:mx-0">我們將 AI 數據分析導入金屬切削、精密研磨與半導體製程，致力於解決產業實務痛點，培育具備實作能力的智慧機械人才。</p>
+                        <button onClick={() => handleNavClick('members-page')} className="group bg-blue-600 hover:bg-blue-500 px-10 py-5 rounded-full font-black text-lg transition-all shadow-2xl shadow-blue-900/40 flex items-center gap-3 mx-auto md:mx-0">認識團隊成員 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/></button>
                     </div>
                 </div>
               </section>
-              <section className="py-24 bg-white">
-                  <div id="news" className="max-w-7xl mx-auto px-4">
-                      <h2 className="text-4xl font-black mb-12 flex items-center gap-4 text-slate-900"><div className="w-2 h-10 bg-blue-600 rounded-full"></div>最新消息</h2>
-                      <div className="grid gap-6">
+              <RevealSection className="py-24 bg-white" id="news-preview">
+                  <div className="max-w-7xl mx-auto px-6">
+                      <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
+                          <div><h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 tracking-tighter">最新消息</h2><div className="w-20 h-1.5 bg-blue-600 rounded-full"></div></div>
+                          <button onClick={() => handleNavClick('news-page')} className="flex items-center gap-2 text-blue-600 font-black hover:text-blue-700 transition-colors uppercase tracking-widest text-sm">查看更多消息 <ArrowRight className="w-4 h-4" /></button>
+                      </div>
+                      <div className="grid gap-8">
                           {news.slice(0, 3).map(item => (
-                              <div key={item.id} className="p-6 md:p-8 border border-slate-100 rounded-3xl bg-slate-50 flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8 hover:shadow-lg transition-all group">
-                                  {item.image && (
-                                      <div className="w-full md:w-48 h-32 md:h-32 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-slate-200 bg-white">
-                                          <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                              <div key={item.id} className="group relative bg-white border border-slate-100 rounded-[40px] p-6 md:p-8 flex flex-col md:flex-row gap-8 items-stretch md:items-center hover:shadow-2xl transition-all duration-500">
+                                  {item.image && (<div className="w-full md:w-56 h-48 md:h-40 rounded-[32px] overflow-hidden flex-shrink-0 shadow-lg border border-slate-100"><img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /></div>)}
+                                  <div className="flex gap-10 items-center flex-grow">
+                                      <div className="hidden sm:flex flex-col items-center justify-center min-w-[100px] py-4 px-2 bg-slate-900 rounded-[30px] text-white group-hover:bg-blue-600 transition-colors duration-500 shadow-xl">
+                                          <div className="text-3xl font-black leading-none mb-1">{item.date?.split('-')[2] || '--'}</div>
+                                          <div className="text-[10px] uppercase font-black tracking-widest opacity-80">{item.date?.split('-')[1] || '--'}月</div>
                                       </div>
-                                  )}
-                                  <div className="flex gap-8 items-center flex-grow">
-                                      <div className="text-blue-600 font-black text-center min-w-[80px]">
-                                          <div className="text-2xl">{item.date?.split('-')[2] || '--'}</div>
-                                          <div className="text-xs uppercase opacity-80">{item.date?.split('-')[1] || '--'}月</div>
-                                      </div>
-                                      <div>
-                                          <span className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full mb-3 inline-block uppercase tracking-widest">{item.tag || 'Activity'}</span>
-                                          <h3 className="text-xl font-bold text-slate-800 leading-snug">{item.title}</h3>
-                                      </div>
+                                      <div className="flex-grow"><span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${item.tag === 'Award' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{item.tag || 'Activity'}</span><h3 className="text-xl md:text-2xl font-black text-slate-800 group-hover:text-blue-600 transition-colors duration-300 leading-snug">{item.title}</h3></div>
                                   </div>
                               </div>
                           ))}
                       </div>
                   </div>
-              </section>
-            </React.Fragment>
+              </RevealSection>
+            </>
           );
+
+          const NewsView = () => {
+            const total = Math.ceil(news.length / itemsPerPage);
+            const data = news.slice((newsPage - 1) * itemsPerPage, newsPage * itemsPerPage);
+            return (
+              <div className="min-h-screen bg-slate-50 pb-24">
+                <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden">
+                    <img src="project_history_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" /><div className="absolute inset-0 bg-blue-900/40 mix-blend-multiply"></div>
+                    <h1 className="text-5xl font-black relative z-10 tracking-tighter">實驗室最新動態</h1>
+                </div>
+                <div className="max-w-5xl mx-auto px-6 py-16 space-y-8">
+                    {data.map(item => (
+                        <div key={item.id} className="group relative bg-white border border-slate-200 rounded-[45px] p-6 md:p-8 flex flex-col md:flex-row gap-8 items-stretch md:items-center hover:shadow-2xl transition-all duration-700 border-b-8 border-slate-100 hover:border-blue-600">
+                             {item.image && (<div className="w-full md:w-64 h-48 md:h-44 rounded-[35px] overflow-hidden flex-shrink-0 shadow-lg border border-slate-50"><img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /></div>)}
+                            <div className="flex gap-10 items-center flex-grow">
+                                <div className="flex flex-col items-center justify-center min-w-[100px] py-6 bg-slate-50 rounded-[40px] border border-slate-100 group-hover:bg-blue-50 transition-colors duration-500">
+                                    <div className="text-3xl font-black text-slate-800 group-hover:text-blue-600">{item.date?.split('-')[2] || '--'}</div>
+                                    <div className="text-[10px] uppercase font-black text-slate-400 group-hover:text-blue-400 tracking-widest mt-1">{item.date?.split('-')[1] || '--'}月</div>
+                                </div>
+                                <div className="flex-grow"><span className={`text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-4 inline-block shadow-sm ${item.tag === 'Award' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-600 text-white'}`}>{item.tag || 'Activity'}</span><h3 className="text-xl md:text-2xl font-black text-slate-800 group-hover:text-blue-700 transition-colors duration-300 leading-tight">{item.title}</h3></div>
+                            </div>
+                        </div>
+                    ))}
+                    <Pagination current={newsPage} total={total} onPageChange={(p) => { setNewsPage(p); window.scrollTo(0,0); }} />
+                </div>
+              </div>
+            );
+          };
 
           const ResearchView = () => (
             <div className="min-h-screen bg-white">
-                <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden">
-                    <img src="研究領域_0.jpg" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-                    <div className="absolute inset-0 bg-blue-900/20 mix-blend-multiply"></div>
-                    <h1 className="text-5xl font-black relative z-10">核心研究領域</h1>
-                    <p className="mt-4 text-blue-200 relative z-10 max-w-2xl mx-auto uppercase tracking-widest text-sm">Core Research Areas</p>
-                </div>
+                <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden"><img src="研究領域_0.jpg" className="absolute inset-0 w-full h-full object-cover opacity-30" /><div className="absolute inset-0 bg-blue-900/20 mix-blend-multiply"></div><h1 className="text-5xl font-black relative z-10 tracking-tighter">核心研究領域</h1></div>
                 <div className="max-w-7xl mx-auto px-6 py-24 grid md:grid-cols-3 gap-12">
-                    {researchAreas.map((area, i) => (
-                        <div key={i} className="text-center p-10 bg-slate-50 border border-slate-100 rounded-[40px] shadow-sm hover:shadow-2xl transition-all duration-500 group">
-                            <div className="mb-8 mx-auto w-fit p-6 bg-white rounded-3xl shadow-inner group-hover:scale-110 transition-transform">{area.icon}</div>
-                            <h3 className="text-2xl font-bold mb-6 text-slate-900">{area.title}</h3>
-                            <p className="text-slate-600 leading-relaxed">{area.desc}</p>
+                    {[{ title: "智慧製造與監控", icon: <Database className="w-8 h-8 text-blue-500" />, desc: "開發線上加工感測訊號分析系統。" }, { title: "精密加工技術", icon: <Settings className="w-8 h-8 text-orange-500" />, desc: "創新高效能加工與研磨技術。" }, { title: "材料與刀具分析", icon: <Cpu className="w-8 h-8 text-green-500" />, desc: "研究材料磨耗與先進鍍層設計。" }].map((area, i) => (
+                        <div key={i} className="text-center p-12 bg-slate-50 border border-slate-100 rounded-[50px] shadow-sm hover:shadow-2xl transition-all duration-700 group flex flex-col items-center">
+                            <div className="mb-10 p-8 bg-white rounded-[35px] shadow-inner group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">{area.icon}</div>
+                            <h3 className="text-2xl font-black mb-6 text-slate-900">{area.title}</h3><p className="text-slate-500 leading-relaxed text-lg font-medium">{area.desc}</p>
                         </div>
                     ))}
                 </div>
             </div>
           );
 
-          const ProjectsView = () => (
-            <div className="min-h-screen bg-slate-50 pb-20">
-                <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden">
-                    <img src="project_history_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-                    <div className="absolute inset-0 bg-slate-900/60 mix-blend-multiply"></div>
-                    <h1 className="text-5xl font-black relative z-10">歷年研究計畫</h1>
-                </div>
-                <div className="max-w-6xl mx-auto px-6 py-24 space-y-12">
-                    {projects.map(p => (
-                        <div key={p.id} className="bg-white p-8 md:p-12 rounded-[48px] border border-slate-200 shadow-sm hover:shadow-2xl hover:translate-x-2 transition-all duration-500 flex flex-col md:flex-row gap-12 items-start md:items-center group">
-                            <div className="flex-shrink-0 w-full md:w-40">
-                                <div className="relative">
-                                    <div className="absolute -left-4 top-0 w-1 h-full bg-blue-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
-                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2 block group-hover:text-blue-600 transition-colors">計畫年度</span>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-4xl font-black text-slate-800 group-hover:text-blue-700 transition-colors">{p.planYear || p.year || '--'}</span>
-                                        <span className="text-sm font-bold text-slate-400">年度</span>
-                                    </div>
-                                    
-                                    <div className="mt-4 pt-4 border-t border-slate-100">
-                                        <div className="flex items-center gap-2 text-slate-500 font-bold text-[11px] mb-2">
-                                            <Clock className="w-3.5 h-3.5 text-blue-500" />
-                                            <span>{p.execYear ? `執行: ${p.execYear}` : (p.startDate ? '執行區間' : '年度計畫')}</span>
-                                        </div>
-                                        {p.startDate && (
-                                            <div className="text-[10px] text-slate-400 font-medium">
-                                                {p.startDate} {p.endDate ? `~ ${p.endDate}` : ''}
-                                            </div>
-                                        )}
-                                        <div className="mt-3">
-                                            <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter shadow-sm transition-all ${
-                                                p.type === 'government' ? 'bg-blue-600 text-white' : 
-                                                p.type === 'industry' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-white'
-                                            }`}>
-                                                {p.type === 'government' ? '國科會' : p.type === 'industry' ? '產學合作' : '研究計畫'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+          const ProjectsView = () => {
+            const total = Math.ceil(projects.length / itemsPerPage);
+            const data = projects.slice((projectsPage - 1) * itemsPerPage, projectsPage * itemsPerPage);
+            return (
+                <div className="min-h-screen bg-slate-50 pb-20">
+                    <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden"><img src="project_history_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" /><div className="absolute inset-0 bg-slate-900/60 mix-blend-multiply"></div><h1 className="text-5xl font-black relative z-10 tracking-tighter">歷年研究計畫</h1></div>
+                    <div className="max-w-6xl mx-auto px-6 py-24 space-y-12">
+                        {data.map(p => (
+                            <div key={p.id} className="bg-white p-10 md:p-12 rounded-[48px] border border-slate-200 shadow-sm hover:shadow-2xl hover:translate-x-2 transition-all duration-500 flex flex-col md:flex-row gap-12 items-start md:items-center group">
+                                <div className="flex-shrink-0 w-full md:w-40"><div className="relative"><span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block group-hover:text-blue-600 transition-colors">計畫年度</span><div className="flex items-baseline gap-1"><span className="text-4xl font-black text-slate-800 group-hover:text-blue-700 transition-colors">{p.planYear || p.year || '--'}</span><span className="text-sm font-bold text-slate-400">年度</span></div>
+                                <div className="mt-4 pt-4 border-t border-slate-100 text-slate-500 font-bold text-[11px] flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-blue-500" /><span>{p.execYear || '年度計畫'}</span></div><div className="mt-3"><span className={`px-3 py-1 text-[10px] font-black rounded-full text-white ${p.type === 'government' ? 'bg-blue-600' : 'bg-emerald-600'}`}>{p.type === 'government' ? '國科會' : '產學'}</span></div></div></div>
+                                <div className="flex-grow"><h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-6 group-hover:text-blue-800 transition-colors leading-tight">{p.title}</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 group-hover:bg-white transition-all"><Briefcase className="text-blue-600"/><div className="text-sm font-black text-slate-700">{p.agency || '資料建立中'}</div></div><div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 group-hover:bg-white transition-all"><Users className="text-blue-600"/><div className="text-sm font-black text-slate-700">{p.role || '主持人'}</div></div></div></div>
                             </div>
-
-                            <div className="flex-grow">
-                                <h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-6 group-hover:text-blue-800 transition-colors leading-tight">{p.title}</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 group-hover:bg-white group-hover:shadow-inner transition-all">
-                                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Briefcase className="w-5 h-5"/></div>
-                                        <div>
-                                            <div className="text-[10px] text-slate-400 font-bold uppercase">委託單位</div>
-                                            <div className="text-sm font-black text-slate-700">{p.agency || '資料建立中'}</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 group-hover:bg-white group-hover:shadow-inner transition-all">
-                                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Users className="w-5 h-5"/></div>
-                                        <div>
-                                            <div className="text-[10px] text-slate-400 font-bold uppercase">主持人 / 角色</div>
-                                            <div className="text-sm font-black text-slate-700">{p.role || '林岳鋒 博士'}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {projects.length === 0 && <div className="text-center py-20 text-slate-400 text-lg font-bold">目前尚無計畫紀錄</div>}
+                        ))}
+                        <Pagination current={projectsPage} total={total} onPageChange={(p) => { setProjectsPage(p); window.scrollTo(0,0); }} />
+                    </div>
                 </div>
-            </div>
-          );
+            );
+          };
 
           const MembersView = () => {
+              const total = Math.ceil(membersData.length / itemsPerPage);
+              const data = membersData.slice((membersPage - 1) * itemsPerPage, membersPage * itemsPerPage);
+
               const renderTree = () => {
                 const piMember = membersData.find(m => m.type === 'pi') || { name: '林岳鋒 博士', type: 'pi' };
                 const phds = membersData.filter(m => m.type === 'phd');
                 const masters = membersData.filter(m => m.type === 'master');
                 const alumni = membersData.filter(m => m.type === 'alumni');
-
-                const groupBy = (list, key) => list.reduce((acc, m) => {
-                    const group = m[key] || '未分類';
-                    if (!acc[group]) acc[group] = [];
-                    acc[group].push(m);
-                    return acc;
-                }, {});
-
+                const groupBy = (list, key) => list.reduce((acc, m) => { const g = m[key] || '未分類'; if (!acc[g]) acc[g] = []; acc[g].push(m); return acc; }, {});
                 const phdGroups = groupBy(phds, 'year');
                 const masterGroups = groupBy(masters, 'year');
                 const alumniGroups = groupBy(alumni, 'classYear');
 
                 return (
                     <div className="tree overflow-x-auto py-16">
-                        <ul>
-                            <li>
-                                <div className="tree-card pi cursor-pointer" onClick={() => setSelectedMember(piMember)}>
-                                    <div className="text-[10px] text-blue-600 font-black uppercase mb-1">Director</div>
-                                    <div className="text-lg font-black">{piMember.name}</div>
-                                </div>
-                                <ul>
-                                    {phds.length > 0 && (
-                                        <li>
-                                            <div className="tree-card category">博士班</div>
-                                            <ul>
-                                                {Object.entries(phdGroups).map(([grade, members]) => (
-                                                    <li key={grade}>
-                                                        <div className="tree-card grade">{grade}</div>
-                                                        <ul>
-                                                            {members.map(m => <li key={m.id}><div className="tree-card cursor-pointer" onClick={() => setSelectedMember(m)}>{m.name}</div></li>)}
-                                                        </ul>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </li>
-                                    )}
-                                    {masters.length > 0 && (
-                                        <li>
-                                            <div className="tree-card category">碩士班</div>
-                                            <ul>
-                                                {Object.entries(masterGroups).map(([grade, members]) => (
-                                                    <li key={grade}>
-                                                        <div className="tree-card grade">{grade}</div>
-                                                        <ul>
-                                                            {members.map(m => <li key={m.id}><div className="tree-card cursor-pointer" onClick={() => setSelectedMember(m)}>{m.name}</div></li>)}
-                                                        </ul>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </li>
-                                    )}
-                                    {alumni.length > 0 && (
-                                        <li>
-                                            <div className="tree-card category">畢業校友</div>
-                                            <ul>
-                                                {Object.entries(alumniGroups).sort((a,b) => b[0] - a[0]).map(([year, members]) => (
-                                                    <li key={year}>
-                                                        <div className="tree-card grade">{year}級</div>
-                                                        <ul>
-                                                            {members.map(m => <li key={m.id}><div className="tree-card cursor-pointer" onClick={() => setSelectedMember(m)}>{m.name}</div></li>)}
-                                                        </ul>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </li>
-                                    )}
-                                </ul>
-                            </li>
-                        </ul>
-                    </div>
+                        <ul><li><div className="tree-card pi" onClick={() => setSelectedMember(piMember)}><div className="text-[10px] text-blue-600 font-black mb-1">Director</div><div className="text-lg font-black">{piMember.name}</div></div>
+                            <ul>{phds.length > 0 && (<li><div className="tree-card category">博士班</div><ul>{Object.entries(phdGroups).map(([g, ms]) => (<li key={g}><div className="tree-card grade">{g}</div><ul>{ms.map(m => <li key={m.id}><div className="tree-card" onClick={() => setSelectedMember(m)}>{m.name}</div></li>)}</ul></li>))}</ul></li>)}
+                                {masters.length > 0 && (<li><div className="tree-card category">碩士班</div><ul>{Object.entries(masterGroups).map(([g, ms]) => (<li key={g}><div className="tree-card grade">{g}</div><ul>{ms.map(m => <li key={m.id}><div className="tree-card" onClick={() => setSelectedMember(m)}>{m.name}</div></li>)}</ul></li>))}</ul></li>)}
+                                {alumni.length > 0 && (<li><div className="tree-card category">畢業校友</div><ul>{Object.entries(alumniGroups).sort((a,b) => b[0] - a[0]).map(([g, ms]) => (<li key={g}><div className="tree-card grade">{g}級</div><ul>{ms.map(m => <li key={m.id}><div className="tree-card" onClick={() => setSelectedMember(m)}>{m.name}</div></li>)}</ul></li>))}</ul></li>)}
+                            </ul></li></ul></div>
                 );
               };
 
               return (
                 <div className="min-h-screen bg-slate-50 pb-20">
-                  <div className="relative bg-slate-900 text-white py-32 px-6 overflow-hidden">
-                    <div className="absolute inset-0 z-0">
-                         <img src="members_bg.jpg.jpg" alt="Members Background" className="w-full h-full object-cover opacity-30" />
-                    </div>
-                    <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center relative z-10">
-                        <div className="text-center md:text-left">
-                            <h1 className="text-5xl font-black mb-4">實驗室成員</h1>
-                            <p className="text-blue-200 uppercase tracking-widest text-sm font-bold">Lab Team Members</p>
-                        </div>
-                        <div className="mt-8 md:mt-0 flex bg-white/10 rounded-[20px] p-1.5 backdrop-blur-xl border border-white/10 shadow-xl">
-                            <button onClick={() => setViewMode('cards')} className={`px-8 py-3 rounded-2xl text-sm font-black flex items-center transition-all duration-300 ${viewMode === 'cards' ? 'bg-white text-slate-900 shadow-xl' : 'text-white hover:bg-white/10'}`}><Grid className="w-4 h-4 mr-2" /> 卡片視圖</button>
-                            <button onClick={() => setViewMode('tree')} className={`px-8 py-3 rounded-2xl text-sm font-black flex items-center transition-all duration-300 ${viewMode === 'tree' ? 'bg-white text-slate-900 shadow-xl' : 'text-white hover:bg-white/10'}`}><Network className="w-4 h-4 mr-2" /> 族譜樹</button>
-                        </div>
-                    </div>
-                  </div>
+                  <div className="relative bg-slate-900 text-white py-32 px-6 overflow-hidden"><img src="members_bg.jpg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center relative z-10"><div className="text-center md:text-left"><h1 className="text-5xl font-black mb-4 tracking-tighter">實驗室成員</h1><p className="text-blue-200 uppercase tracking-widest text-sm font-bold opacity-80">Research Talent & Community</p></div>
+                    <div className="mt-8 md:mt-0 flex bg-white/10 rounded-[25px] p-1.5 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                        <button onClick={() => setViewMode('cards')} className={`px-8 py-3 rounded-[20px] text-sm font-black flex items-center transition-all ${viewMode === 'cards' ? 'bg-white text-slate-900 shadow-xl' : 'text-white hover:bg-white/10'}`}><Grid className="w-4 h-4 mr-2" /> 卡片視圖</button>
+                        <button onClick={() => setViewMode('tree')} className={`px-8 py-3 rounded-[20px] text-sm font-black flex items-center transition-all ${viewMode === 'tree' ? 'bg-white text-slate-900 shadow-xl' : 'text-white hover:bg-white/10'}`}><Network className="w-4 h-4 mr-2" /> 族譜樹</button>
+                    </div></div></div>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-                        {loading ? <div className="text-center py-20 text-slate-400 font-bold animate-pulse uppercase tracking-widest text-sm">Loading Members...</div> : (
+                        {loading ? <div className="text-center py-20 text-slate-400 font-bold animate-pulse">Synchronizing Data...</div> : (
                             viewMode === 'tree' ? renderTree() : (
-                                <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-10">
-                                    {membersData.map(member => (
-                                        <div key={member.id} className="bg-white p-10 rounded-[48px] border border-slate-100 text-center hover:shadow-2xl hover:border-blue-200 transition-all duration-500 group cursor-pointer" onClick={() => setSelectedMember(member)}>
-                                            <div className="w-28 h-28 bg-slate-50 rounded-full mx-auto mb-6 overflow-hidden ring-4 ring-white shadow-inner group-hover:scale-110 transition-transform duration-500 flex items-center justify-center">
-                                                {member.photo ? <img src={member.photo} alt={member.name} className="w-full h-full object-cover" /> : <UserIcon className="w-12 h-12 text-slate-200" />}
+                                <>
+                                <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-12">
+                                    {data.map(member => (
+                                        <div key={member.id} className="bg-white p-10 rounded-[50px] border border-slate-100 text-center hover:shadow-2xl transition-all duration-700 group cursor-pointer" onClick={() => setSelectedMember(member)}>
+                                            <div className="w-32 h-32 bg-slate-50 rounded-[40px] mx-auto mb-8 overflow-hidden ring-4 ring-white shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-700 flex items-center justify-center">
+                                                {member.photo ? <img src={member.photo} className="w-full h-full object-cover" /> : <UserIcon className="w-16 h-16 text-slate-200" />}
                                             </div>
-                                            <h3 className="text-2xl font-black text-slate-900 mb-1">{member.name}</h3>
-                                            <p className="text-blue-600 text-sm font-black uppercase tracking-tighter">
-                                                {member.type === 'pi' ? 'PI' : (member.year || member.classYear + '級')}
-                                            </p>
+                                            <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight group-hover:text-blue-600 transition-colors">{member.name}</h3>
+                                            <p className="text-blue-600 text-xs font-black uppercase tracking-[0.2em] mb-4">{member.type === 'pi' ? 'Director' : (member.year || member.classYear + '級')}</p>
+                                            <div className="h-px w-10 bg-slate-100 mx-auto mb-4 group-hover:w-20 group-hover:bg-blue-200 transition-all duration-500"></div>
+                                            <p className="text-slate-400 text-xs font-bold line-clamp-2">{member.researchDetail || "研究開發中..."}</p>
                                         </div>
                                     ))}
                                 </div>
+                                <Pagination current={membersPage} total={total} onPageChange={setMembersPage} />
+                                </>
                             )
                         )}
                   </div>
@@ -529,59 +537,57 @@
               );
           };
 
-          const PublicationsView = () => (
-            <div className="min-h-screen bg-slate-50">
-                <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden">
-                    <img src="project_history_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-                    <h1 className="text-5xl font-black relative z-10">發表論文</h1>
-                    <p className="mt-4 text-blue-200 relative z-10 max-w-2xl mx-auto uppercase tracking-widest text-sm">Publications & Papers</p>
-                </div>
-                <div className="max-w-5xl mx-auto px-6 py-24 space-y-6">
-                    {publications.map((p, i) => (
-                        <div key={i} className="bg-white p-10 rounded-[32px] border-l-[10px] border-blue-600 shadow-sm flex flex-col md:flex-row gap-8 items-start hover:shadow-xl transition-all">
-                            <div className="md:w-20 font-black text-slate-300 text-2xl">{p.year || '----'}</div>
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900 mb-4 leading-tight">{p.title}</h3>
-                                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 font-medium">
-                                    <span className="flex items-center gap-2"><UserIcon className="w-4 h-4"/> {p.authors || '成員姓名'}</span>
-                                    <span className="flex items-center gap-2 text-blue-600"><BookOpen className="w-4 h-4"/> {p.venue || '期刊名稱'}</span>
+          const PublicationsView = () => {
+            const total = Math.ceil(publications.length / itemsPerPage);
+            const data = publications.slice((pubsPage - 1) * itemsPerPage, pubsPage * itemsPerPage);
+            return (
+                <div className="min-h-screen bg-slate-50 pb-24">
+                    <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden"><img src="project_history_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" /><h1 className="text-5xl font-black relative z-10 tracking-tighter">發表論文</h1></div>
+                    <div className="max-w-5xl mx-auto px-6 py-24 space-y-8">
+                        {data.map((p, i) => (
+                            <div key={i} className="bg-white p-10 rounded-[45px] border-l-[12px] border-blue-600 shadow-sm flex flex-col md:flex-row gap-8 items-start hover:shadow-2xl transition-all duration-500">
+                                <div className="md:w-24 font-black text-slate-200 text-3xl tracking-tighter">{p.year || '----'}</div>
+                                <div className="flex-grow">
+                                    <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-6 leading-snug tracking-tight">{p.title}</h3>
+                                    <div className="flex flex-wrap gap-x-8 gap-y-3 text-xs text-slate-500 font-bold uppercase tracking-widest">
+                                        <span className="flex items-center gap-2.5"><UserIcon className="w-4 h-4 text-blue-500"/> {p.authors || 'Members'}</span>
+                                        <span className="flex items-center gap-2.5 text-blue-600"><BookOpen className="w-4 h-4"/> {p.venue || 'Journal'}</span>
+                                    </div>
+                                    {(p.pdfFile || p.url) && (
+                                        <button onClick={() => p.pdfFile ? openDataUrl(p.pdfFile) : window.open(p.url, '_blank')} className="mt-6 flex items-center gap-2 text-blue-600 font-black text-[10px] hover:text-blue-800 transition-colors bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
+                                            <FileText className="w-3.5 h-3.5" /> 點擊讀取全文
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                        <Pagination current={pubsPage} total={total} onPageChange={setPubsPage} />
+                    </div>
                 </div>
-            </div>
-          );
+            );
+          };
 
           const GalleryView = () => {
-            const [selectedAlbum, setSelectedAlbum] = useState(null);
             const albums = useMemo(() => {
                 const groups = {};
-                galleryImages.forEach(img => {
-                    const title = img.title || '未分類相簿';
-                    if(!groups[title]) groups[title] = { title, images: [], cover: img.src, date: img.date };
-                    groups[title].images.push(img);
-                });
+                galleryImages.forEach(img => { const title = img.title || '未分類相簿'; if(!groups[title]) groups[title] = { title, images: [], cover: img.src, date: img.date }; groups[title].images.push(img); });
                 return Object.values(groups).sort((a,b) => new Date(b.date) - new Date(a.date));
             }, [galleryImages]);
+            const total = Math.ceil(albums.length / itemsPerPage);
+            const data = albums.slice((galleryPage - 1) * itemsPerPage, galleryPage * itemsPerPage);
 
             return (
                 <div className="min-h-screen bg-slate-50 pb-20">
-                    <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden">
-                        <img src="gallery_bg.jpg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-                        <h1 className="text-5xl font-black relative z-10">生活寫真</h1>
-                    </div>
-                    <div className="max-w-7xl mx-auto px-6 py-24 grid md:grid-cols-3 gap-10">
-                        {albums.map((album, i) => (
-                            <div key={i} className="bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-700 cursor-pointer group">
-                                <div className="h-64 overflow-hidden relative">
-                                    <img src={album.cover} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                                    <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-xs font-bold">{album.images.length} PHOTOS</div>
-                                </div>
-                                <div className="p-8"><h3 className="font-bold text-xl text-slate-800">{album.title}</h3><p className="text-slate-400 text-sm mt-2">{album.date || '----'}</p></div>
+                    <div className="relative bg-slate-900 text-white py-32 px-6 text-center overflow-hidden"><img src="gallery_bg.jpg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-20" /><h1 className="text-5xl font-black relative z-10 tracking-tighter">生活寫真</h1></div>
+                    <div className="max-w-7xl mx-auto px-6 py-24 grid md:grid-cols-2 lg:grid-cols-3 gap-12">
+                        {data.map((album, i) => (
+                            <div key={i} className="bg-white rounded-[50px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-1000 cursor-pointer group border border-slate-100">
+                                <div className="h-72 overflow-hidden relative"><img src={album.cover} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /><div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-10"><div className="text-white"><div className="text-2xl font-black">{album.title}</div></div></div><div className="absolute top-6 right-6 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">{album.images.length} Photos</div></div>
+                                <div className="p-10"><h3 className="font-black text-xl text-slate-800 mb-2 group-hover:text-blue-600">{album.title}</h3><p className="text-slate-400 font-bold text-[10px] flex items-center gap-2 uppercase tracking-widest"><CalendarIcon className="w-4 h-4"/> {album.date || 'Archives'}</p></div>
                             </div>
                         ))}
                     </div>
+                    <Pagination current={galleryPage} total={total} onPageChange={setGalleryPage} />
                 </div>
             );
           };
@@ -590,6 +596,7 @@
             <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
               <Navigation />
               {currentPage === 'home' && <HomeView />}
+              {currentPage === 'news' && <NewsView />}
               {currentPage === 'projects' && <ProjectsView />}
               {currentPage === 'members' && <MembersView />}
               {currentPage === 'gallery' && <GalleryView />}
