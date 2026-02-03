@@ -3,173 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>實驗室後台管理系統</title>
+    <title>實驗室後台管理系統 (Admin Dashboard)</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <script type="module">
-        // 1. Supabase 初始化
-        const supabaseUrl = "https://uyvyxkrikmdyypppqsdt.supabase.co"; 
-        const supabaseKey = "sb_publishable_AR5cKUsnsxgFRcC1rDCWlQ_mYRrxVUC"; 
-
-        const { createClient } = supabase;
-        const _supabase = createClient(supabaseUrl, supabaseKey);
-
-        window.dbOps = {
-            fetch: async (col) => {
-                const { data, error } = await _supabase.from('lab_content').select('*').eq('collection', col).order('created_at', { ascending: false });
-                if (error) { console.error(error); return []; }
-                return data.map(r => ({ id: r.id, ...r.data }));
-            },
-            save: async (col, item) => {
-                const isNew = !item.id;
-                const payload = { collection: col, data: { ...item, updatedAt: Date.now() } };
-                if (isNew) {
-                    return await _supabase.from('lab_content').insert(payload);
-                } else {
-                    const { id, ...cleanItem } = item;
-                    return await _supabase.from('lab_content').update({ data: cleanItem }).eq('id', id);
-                }
-            },
-            delete: async (id) => {
-                return await _supabase.from('lab_content').delete().eq('id', id);
-            }
-        };
-
-        // SQL 初始化提示
-        console.log(`
-            %c 🗄️ Supabase 資料表設定建議 %c
-            在 Supabase SQL Editor 執行以下指令：
-            
-            create table lab_content (
-              id uuid default gen_random_uuid() primary key,
-              created_at timestamp with time zone default now(),
-              collection text not null,
-              data jsonb not null
-            );
-            
-            alter table lab_content enable row level security;
-            create policy "Public Access" on lab_content for all using (true) with check (true);
-        `, "color: white; background: #3b82f6; padding: 4px 8px; border-radius: 4px;", "color: inherit;");
-    </script>
+    <style>
+        body { font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
 </head>
 <body class="bg-slate-100">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
-        const AdminApp = () => {
-            const [isLogin, setIsLogin] = useState(false);
-            const [tab, setTab] = useState('news');
-            const [data, setData] = useState([]);
-            const [editing, setEditing] = useState(null);
+        // --- 全域定義 ---
+        const TAB_NAMES = { 
+            news: '最新消息', 
+            projects: '歷年計畫', 
+            members: '成員管理', 
+            publications: '發表論文', 
+            gallery: '生活寫真' 
+        };
 
-            const load = async () => {
-                const list = await window.dbOps.fetch(tab);
-                setData(list);
+        const supabaseUrl = "https://uyvyxkrikmdyypppqsdt.supabase.co"; 
+        const supabaseKey = "sb_publishable_AR5cKUsnsxgFRcC1rDCWlQ_mYRrxVUC"; 
+        const ADMIN_PASS = "0701"; // 預設密碼
+
+        // --- 工具函數：圖片壓縮 ---
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX = 800;
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                        canvas.width = w; canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                };
+            });
+        };
+
+        // --- 圖標元件 ---
+        const FolderIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 text-yellow-400 mb-2 group-hover:scale-110 transition-transform">
+                <path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3V18a3 3 0 0 0 3 3h15ZM1.5 10.146V6a3 3 0 0 1 3-3h5.379a2.25 2.25 0 0 1 1.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 0 1 3 3v1.146A4.483 4.483 0 0 0 19.5 9h-15a4.483 4.483 0 0 0-3 1.146Z" />
+            </svg>
+        );
+
+        // --- 編輯彈窗元件 ---
+        const EditorModal = ({ activeTab, initData, onSave, onBatchSave, onClose }) => {
+            const [formData, setFormData] = useState({ ...initData });
+            const [galleryImages, setGalleryImages] = useState([]);
+            const [isSaving, setIsSaving] = useState(false);
+
+            useEffect(() => {
+                if (activeTab === 'gallery') setGalleryImages(initData.src ? [{src: initData.src}] : []);
+                if (activeTab === 'members' && !initData.pdfs) setFormData(p => ({...p, pdfs: []}));
+            }, [initData, activeTab]);
+
+            const handleFile = async (e) => {
+                const files = Array.from(e.target.files);
+                const compressed = await Promise.all(files.map(f => compressImage(f)));
+                if (activeTab === 'gallery') setGalleryImages(prev => [...prev, ...compressed.map(src => ({src}))]);
+                else setFormData(p => ({ ...p, [activeTab === 'members' ? 'photo' : 'image']: compressed[0] }));
             };
 
-            useEffect(() => { if(isLogin) load(); }, [isLogin, tab]);
-
-            const handleSave = async (e) => {
+            const handleSubmit = async (e) => {
                 e.preventDefault();
-                const formData = new FormData(e.target);
-                const obj = Object.fromEntries(formData.entries());
-                if (editing?.id) obj.id = editing.id;
-                
-                await window.dbOps.save(tab, obj);
-                setEditing(null);
-                load();
+                setIsSaving(true);
+                try {
+                    if (activeTab === 'gallery' && !formData.id && galleryImages.length > 1) {
+                        const items = galleryImages.map((img, idx) => ({ ...formData, src: img.src, createdAt: Date.now() - idx * 1000 }));
+                        await onBatchSave(items);
+                    } else {
+                        const data = { ...formData };
+                        if (activeTab === 'gallery' && galleryImages.length > 0) data.src = galleryImages[0].src;
+                        await onSave(data);
+                    }
+                    onClose();
+                } catch (err) { alert("儲存失敗"); }
+                finally { setIsSaving(false); }
             };
 
-            if (!isLogin) return (
-                <div className="min-h-screen flex items-center justify-center">
-                    <form onSubmit={(e) => { e.preventDefault(); if(e.target.pw.value === '0701') setIsLogin(true); }} className="bg-white p-8 rounded-xl shadow-lg border">
-                        <h2 className="text-xl font-bold mb-4">管理員登入</h2>
-                        <input name="pw" type="password" className="border p-2 w-full mb-4 rounded" placeholder="請輸入密碼" />
-                        <button className="w-full bg-blue-600 text-white py-2 rounded font-bold">登入</button>
+            return (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative my-auto">
+                        <h3 className="text-2xl font-bold mb-6 text-slate-800">{formData.id ? '編輯' : '新增'}{TAB_NAMES[activeTab]}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">主要標題 / 姓名</label>
+                                <input required value={formData.title || formData.name || ''} onChange={e=>setFormData({...formData, [activeTab==='members'?'name':'title']:e.target.value})} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                            </div>
+
+                            {activeTab === 'news' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="date" value={formData.date||''} onChange={e=>setFormData({...formData, date:e.target.value})} className="border p-3 rounded-lg" />
+                                    <select value={formData.tag||'Activity'} onChange={e=>setFormData({...formData, tag:e.target.value})} className="border p-3 rounded-lg">
+                                        <option value="Activity">一般動態</option>
+                                        <option value="Award">榮譽獲獎</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            {activeTab === 'projects' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input placeholder="年度 (如 113)" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border p-3 rounded-lg" />
+                                    <select value={formData.type||'government'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border p-3 rounded-lg">
+                                        <option value="government">教育部/國科會計畫</option>
+                                        <option value="industry">產學合作計畫</option>
+                                        <option value="patent">專利與技術</option>
+                                        <option value="competition">競賽獲獎</option>
+                                    </select>
+                                    <input placeholder="委託單位" value={formData.agency||''} onChange={e=>setFormData({...formData, agency:e.target.value})} className="border p-3 rounded-lg col-span-2" />
+                                    <textarea placeholder="詳細說明" value={formData.desc||''} onChange={e=>setFormData({...formData, desc:e.target.value})} className="border p-3 rounded-lg col-span-2" />
+                                </div>
+                            )}
+
+                            {activeTab === 'members' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <select value={formData.type||'master'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border p-3 rounded-lg">
+                                        <option value="pi">指導教授</option>
+                                        <option value="phd">博士生</option>
+                                        <option value="master">碩士生</option>
+                                        <option value="alumni">畢業校友</option>
+                                    </select>
+                                    <input placeholder="年級 (如 碩一)" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border p-3 rounded-lg" />
+                                    <textarea placeholder="詳細研究內容" value={formData.researchDetail||''} onChange={e=>setFormData({...formData, researchDetail:e.target.value})} className="border p-3 rounded-lg col-span-2 h-24" />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-bold mb-1">圖片上傳 (自動壓縮)</label>
+                                <input type="file" multiple={activeTab==='gallery'} accept="image/*" onChange={handleFile} className="w-full text-sm" />
+                                <div className="grid grid-cols-5 gap-2 mt-2">
+                                    {(activeTab === 'gallery' ? galleryImages : [{src: formData.photo || formData.image}]).map((img, i) => img.src && (
+                                        <img key={i} src={img.src} className="w-full aspect-square object-cover rounded border border-slate-200" />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-6 border-t">
+                                <button type="button" onClick={onClose} className="px-6 py-2 border rounded-lg hover:bg-slate-50 transition-colors">取消</button>
+                                <button type="submit" disabled={isSaving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">
+                                    {isSaving ? '處理中...' : '儲存資料'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 主程式元件 ---
+        const AdminApp = () => {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [tab, setTab] = useState('news');
+            const [dataList, setDataList] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [editing, setEditing] = useState(null);
+            const [viewingAlbum, setViewingAlbum] = useState(null);
+            const [supabase, setSupabase] = useState(null);
+
+            // 初始化 Supabase
+            useEffect(() => {
+                const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+                setSupabase(client);
+            }, []);
+
+            const loadData = async () => {
+                if (!supabase) return;
+                setLoading(true);
+                const { data, error } = await supabase
+                    .from('lab_content')
+                    .select('id, data')
+                    .eq('collection', tab)
+                    .order('created_at', { ascending: false });
+                
+                if (!error) setDataList(data.map(r => ({ id: r.id, ...r.data })));
+                setLoading(false);
+            };
+
+            useEffect(() => { if (isLoggedIn && supabase) loadData(); }, [isLoggedIn, tab, supabase]);
+
+            const handleDelete = async (id) => {
+                if (!confirm('確定要刪除這筆資料嗎？')) return;
+                const { error } = await supabase.from('lab_content').delete().eq('id', id);
+                if (!error) loadData();
+            };
+
+            const handleSave = async (payload) => {
+                const isNew = !payload.id;
+                const dataToSave = { collection: tab, data: { ...payload, updatedAt: Date.now() } };
+                
+                if (isNew) {
+                    await supabase.from('lab_content').insert(dataToSave);
+                } else {
+                    const { id, ...cleanData } = payload;
+                    await supabase.from('lab_content').update({ data: cleanData }).eq('id', payload.id);
+                }
+                loadData();
+            };
+
+            const handleBatchSave = async (items) => {
+                const rows = items.map(item => ({ collection: tab, data: { ...item, createdAt: Date.now() } }));
+                await supabase.from('lab_content').insert(rows);
+                loadData();
+            };
+
+            const albumGroups = useMemo(() => {
+                if (tab !== 'gallery') return {};
+                const g = {};
+                dataList.forEach(item => {
+                    const t = item.title || '未分類相簿';
+                    if (!g[t]) g[t] = [];
+                    g[t].push(item);
+                });
+                return g;
+            }, [dataList, tab]);
+
+            const displayList = useMemo(() => {
+                if (tab === 'gallery' && viewingAlbum) return dataList.filter(d => (d.title || '未分類相簿') === viewingAlbum);
+                return dataList;
+            }, [dataList, tab, viewingAlbum]);
+
+            if (!isLoggedIn) return (
+                <div className="h-screen flex items-center justify-center bg-slate-900 px-4">
+                    <form onSubmit={e => { e.preventDefault(); if(e.target.pw.value === ADMIN_PASS) setIsLoggedIn(true); else alert('密碼錯誤'); }} 
+                          className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm">
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-slate-800">SMSMP Lab 後台</h2>
+                            <p className="text-slate-400 text-sm mt-2">請輸入管理密碼以繼續</p>
+                        </div>
+                        <input name="pw" type="password" placeholder="密碼 (預設 0701)" className="w-full border p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 outline-none" required autoFocus />
+                        <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">登入系統</button>
                     </form>
                 </div>
             );
 
             return (
-                <div className="flex min-h-screen">
-                    <div className="w-64 bg-slate-800 text-white p-6">
-                        <h1 className="text-xl font-bold mb-10">後台管理</h1>
-                        <div className="space-y-2">
-                            {['news', 'members', 'projects'].map(t => (
-                                <button key={t} onClick={() => setTab(t)} className={`w-full text-left px-4 py-2 rounded transition-colors ${tab === t ? 'bg-blue-600' : 'hover:bg-slate-700'}`}>{t === 'news' ? '最新消息' : t === 'members' ? '成員管理' : '計畫管理'}</button>
+                <div className="min-h-screen flex bg-slate-50">
+                    {/* 側邊導覽 */}
+                    <aside className="w-72 bg-slate-900 text-white p-8 flex-shrink-0 shadow-2xl z-10 text-nowrap">
+                        <div className="mb-12">
+                            <h1 className="text-2xl font-black text-blue-400 tracking-tighter">SMSMP LAB</h1>
+                            <p className="text-slate-500 text-xs mt-1 uppercase font-bold tracking-widest">Control Panel</p>
+                        </div>
+                        <nav className="space-y-2">
+                            {Object.entries(TAB_NAMES).map(([key, label]) => (
+                                <button key={key} onClick={() => { setTab(key); setViewingAlbum(null); }} 
+                                        className={`w-full text-left px-5 py-4 rounded-2xl transition-all duration-200 font-medium flex items-center gap-3 ${tab===key ? 'bg-blue-600 shadow-xl shadow-blue-900/50 scale-105' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                    <div className={`w-2 h-2 rounded-full ${tab===key ? 'bg-white' : 'bg-transparent'}`}></div>
+                                    {label}
+                                </button>
                             ))}
+                        </nav>
+                        <div className="mt-20 pt-8 border-t border-slate-800">
+                             <button onClick={() => window.location.reload()} className="text-xs text-slate-600 hover:text-slate-400 transition-colors">登出系統</button>
                         </div>
-                    </div>
-                    <div className="flex-grow p-10">
-                        <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-2xl font-bold uppercase">{tab}</h2>
-                            <button onClick={() => setEditing({})} className="bg-green-600 text-white px-4 py-2 rounded">+ 新增項目</button>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 border-b">
-                                    <tr>
-                                        <th className="p-4">內容</th>
-                                        <th className="p-4">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.map(item => (
-                                        <tr key={item.id} className="border-b hover:bg-slate-50">
-                                            <td className="p-4">
-                                                <div className="font-bold">{item.title || item.name}</div>
-                                                <div className="text-sm text-slate-500">{item.date || item.year}</div>
-                                            </td>
-                                            <td className="p-4 space-x-4">
-                                                <button onClick={() => setEditing(item)} className="text-blue-600">編輯</button>
-                                                <button onClick={async () => { if(confirm('刪除？')){ await window.dbOps.delete(item.id); load(); } }} className="text-red-600">刪除</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {editing && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-                            <form onSubmit={handleSave} className="bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl">
-                                <h3 className="text-xl font-bold mb-6">{editing.id ? '編輯' : '新增'}項目</h3>
-                                <div className="space-y-4">
-                                    <input name={tab === 'members' ? 'name' : 'title'} defaultValue={editing.name || editing.title} placeholder="標題/姓名" className="w-full border p-2 rounded" required />
-                                    {tab === 'news' && <input name="date" type="date" defaultValue={editing.date} className="w-full border p-2 rounded" required />}
-                                    {tab === 'members' && (
-                                        <>
-                                            <input name="year" defaultValue={editing.year} placeholder="年級 (e.g. 碩一)" className="w-full border p-2 rounded" />
-                                            <select name="type" defaultValue={editing.type} className="w-full border p-2 rounded">
-                                                <option value="master">碩士生</option>
-                                                <option value="pi">指導教授</option>
-                                                <option value="alumni">畢業校友</option>
-                                            </select>
-                                        </>
+                    </aside>
+                    
+                    {/* 主內容區 */}
+                    <main className="flex-grow p-12 overflow-y-auto h-screen custom-scrollbar">
+                        <header className="flex justify-between items-end mb-10">
+                            <div>
+                                <h2 className="text-4xl font-bold text-slate-800 flex items-center gap-4">
+                                    {tab === 'gallery' && viewingAlbum && (
+                                        <button onClick={() => setViewingAlbum(null)} className="text-blue-500 hover:scale-125 transition-transform">←</button>
                                     )}
-                                    <textarea name={tab === 'members' ? 'research' : 'desc'} defaultValue={editing.research || editing.desc} placeholder="研究方向或說明" className="w-full border p-2 rounded h-24" />
-                                </div>
-                                <div className="flex justify-end gap-4 mt-8">
-                                    <button type="button" onClick={() => setEditing(null)} className="px-4 py-2 border rounded">取消</button>
-                                    <button className="px-4 py-2 bg-blue-600 text-white rounded font-bold">儲存</button>
-                                </div>
-                            </form>
-                        </div>
-                    )}
+                                    {tab === 'gallery' && viewingAlbum ? viewingAlbum : TAB_NAMES[tab]}
+                                </h2>
+                                <p className="text-slate-400 mt-2">管理您的網站內容，所有更動將即時反應在前台。</p>
+                            </div>
+                            <button onClick={() => setEditing({})} className="bg-green-600 text-white px-8 py-4 rounded-2xl shadow-xl hover:bg-green-700 transition-all font-bold flex items-center gap-2">
+                                <span className="text-xl">+</span> 新增資料
+                            </button>
+                        </header>
+
+                        {loading ? (
+                            <div className="flex items-center justify-center h-64 text-slate-400 animate-pulse">連線資料庫中...</div>
+                        ) : (
+                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                {tab === 'gallery' && !viewingAlbum ? (
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 p-10">
+                                        {Object.entries(albumGroups).map(([title, items]) => (
+                                            <div key={title} onClick={() => setViewingAlbum(title)} 
+                                                 className="group border border-slate-100 rounded-3xl p-8 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all flex flex-col items-center text-center shadow-sm">
+                                                <FolderIcon />
+                                                <span className="font-bold text-slate-800">{title}</span>
+                                                <span className="text-xs text-slate-400 mt-2 bg-slate-100 px-2 py-1 rounded-full">{items.length} 張相片</span>
+                                            </div>
+                                        ))}
+                                        {Object.keys(albumGroups).length === 0 && <div className="col-span-full py-20 text-center text-slate-300">尚無任何相簿</div>}
+                                    </div>
+                                ) : (
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b text-slate-500 text-sm">
+                                                <th className="p-6 font-bold text-left">內容詳情</th>
+                                                <th className="p-6 font-bold text-right">管理操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {displayList.map(item => (
+                                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="p-6">
+                                                        <div className="flex items-center gap-6">
+                                                            <div className="w-16 h-16 bg-slate-100 rounded-2xl overflow-hidden shadow-inner flex-shrink-0">
+                                                                {(item.photo || item.image || item.src) ? (
+                                                                    <img src={item.photo || item.image || item.src} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-slate-300">無圖</div>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-bold text-slate-800 text-lg">{item.title || item.name}</div>
+                                                                <div className="flex gap-3 mt-1">
+                                                                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{item.year || item.date}</span>
+                                                                    <span className="text-xs text-slate-400">{item.type || item.tag || '預設'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-6 text-right space-x-4">
+                                                        <button onClick={() => setEditing(item)} className="text-blue-600 font-bold hover:underline">編輯</button>
+                                                        <button onClick={() => handleDelete(item.id)} className="text-red-400 font-bold hover:underline">刪除</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                                {displayList.length === 0 && !viewingAlbum && <div className="p-20 text-center text-slate-300">此分類目前尚無資料，請點擊右上方按鈕新增。</div>}
+                            </div>
+                        )}
+                    </main>
+                    
+                    {/* 編輯彈窗 */}
+                    {editing && <EditorModal activeTab={tab} initData={editing} onSave={handleSave} onBatchSave={handleBatchSave} onClose={() => setEditing(null)} />}
                 </div>
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<AdminApp />);
+        // --- 啟動 React ---
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+            ReactDOM.createRoot(rootElement).render(<AdminApp />);
+        }
     </script>
 </body>
 </html>
