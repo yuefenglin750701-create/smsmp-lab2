@@ -284,13 +284,48 @@
 
                             {activeTab === 'members' && (
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <select value={formData.type||'master'} onChange={e=>setFormData({...formData, type:e.target.value})} className="border-2 border-slate-100 p-3 rounded-2xl text-sm">
-                                            <option value="pi">指導教授</option><option value="phd">博士生</option><option value="master">碩士生</option><option value="alumni">畢業校友</option>
-                                        </select>
-                                        <input placeholder="年級 (如碩一)" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="border-2 border-slate-100 p-3 rounded-2xl text-sm" />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">身分類別</label>
+                                            <select value={formData.type||'alumni'} onChange={e=>setFormData({...formData, type:e.target.value})} className="w-full border-2 border-slate-100 p-3 rounded-2xl text-sm">
+                                                <option value="pi">指導教授</option><option value="phd">博士生</option><option value="master">碩士生</option><option value="alumni">畢業校友</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">年度</label>
+                                            <input placeholder="例如：114" value={formData.year||''} onChange={e=>setFormData({...formData, year:e.target.value})} className="w-full border-2 border-slate-100 p-3 rounded-2xl text-sm" />
+                                        </div>
                                     </div>
-                                    <textarea placeholder="研究方向詳細內容..." value={formData.researchDetail||''} onChange={e=>setFormData({...formData, researchDetail:e.target.value})} className="border-2 border-slate-100 p-3 rounded-2xl w-full h-24 text-sm" />
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">論文題目</label>
+                                        <textarea placeholder="請輸入論文題目" value={formData.thesis||''} onChange={e=>setFormData({...formData, thesis:e.target.value})} className="border-2 border-blue-100 bg-blue-50/20 p-3 rounded-2xl w-full h-24 text-sm focus:border-blue-400 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">畢業流向</label>
+                                        <textarea placeholder="例如：任職公司、職稱、升學、創業、待補" value={formData.graduateFlow || formData.career || ''} onChange={e=>setFormData({...formData, graduateFlow:e.target.value, career:e.target.value})} className="border-2 border-emerald-100 bg-emerald-50/20 p-3 rounded-2xl w-full h-24 text-sm focus:border-emerald-400 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">產業類別</label>
+                                        <input placeholder="例如：半導體、工具機、精密製造、升學研究、待補" value={formData.industryCategory || ''} onChange={e=>setFormData({...formData, industryCategory:e.target.value})} className="border-2 border-orange-100 bg-orange-50/20 p-3 rounded-2xl w-full text-sm focus:border-orange-400 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">研究方向／備註</label>
+                                        <textarea placeholder="研究方向詳細內容..." value={formData.researchDetail||''} onChange={e=>setFormData({...formData, researchDetail:e.target.value})} className="border-2 border-slate-100 p-3 rounded-2xl w-full h-20 text-sm" />
+                                    </div>
+                                </div>
+                            )}
+
+
+                            {activeTab === 'gallery' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">照片年度</label>
+                                        <input placeholder="例如：114" value={formData.year || ''} onChange={e=>setFormData({...formData, year:e.target.value})} className="w-full border-2 border-slate-100 p-3 rounded-2xl text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">活動日期</label>
+                                        <input type="date" value={formData.date || ''} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full border-2 border-slate-100 p-3 rounded-2xl text-sm" />
+                                    </div>
                                 </div>
                             )}
 
@@ -317,6 +352,44 @@
                 </div>
             );
         };
+
+
+        const DEFAULT_STUDENTS_IMPORT = [
+            {name:'賴柏丞', year:'114', type:'alumni', thesis:'基於田口方法與多目標最佳化預測之故障偵測於單晶矽切削加工特性之研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'廖子彥', year:'113', type:'alumni', thesis:'點膠頭加工後測試之影響', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'李瑜汝', year:'113', type:'alumni', thesis:'PCD微電極電漿加工品質與表面加工品質之影響', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'蔡治文', year:'113', type:'alumni', thesis:'熱處理對M390不鏽鋼銑削刀具磨耗與表面品質影響之研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'廖瑋婷', year:'113', type:'alumni', thesis:'自行車花鼓ISO 4210標準之CAE模擬與優化實驗分析', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'李宥廷', year:'113', type:'alumni', thesis:'應用自製雙變頻器與PID控制系統於單晶矽電漿石破切削之田口法與多目標最佳化預測研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'劉冠宏', year:'113', type:'alumni', thesis:'應用4-酸基苯酚於添加劑於奈米磨粒性能於水潤滑與抗腐蝕行為研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'蔡宗維', year:'113', type:'alumni', thesis:'應用超音波輔助加工於PEEK複合材料鑽削之能耗分析與參數最佳化', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'林政均', year:'113', type:'alumni', thesis:'雙擺臂倒單擺系統之混合控制策略及其在自駕公共載具穩定性控制中的應用', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'李柏翰', year:'113', type:'alumni', thesis:'五軸工具機加工運轉之能耗即時監測分析與優化', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'劉冠宏', year:'112', type:'alumni', thesis:'鑽石線切削優化拋磨製程變數與機械參數影響', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'張瑞豪', year:'112', type:'alumni', thesis:'使用田口方法與變數分析於RC-25鋼調質加工過程中硬化表面粗糙度與電漿變數', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'黃家文', year:'112', type:'alumni', thesis:'超深冷處理與深冷處理對M390粉末工具鋼機械組織與機械性質影響之研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'吳冠龍', year:'112', type:'alumni', thesis:'探討車床刀桿不同參數配置之振動頻譜分析與倒角變化關係研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'陳韋廷', year:'112', type:'alumni', thesis:'應用磁流變液輔助於鑽削機鑽探製程優化研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'江韋綸', year:'112', type:'alumni', thesis:'應用田口方法進行鑽石線切削機之粗糙度預測與最佳化研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'吳志豪', year:'112', type:'alumni', thesis:'應用類神經網路於超音波振動輔助鑽孔加工優化研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'林怡君', year:'112', type:'alumni', thesis:'環保配方於奈米磨粒性能於水潤滑與抗腐蝕性能研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'劉家凱', year:'112', type:'alumni', thesis:'基於機器學習於單晶矽製程之磨耗控制與缺陷改善研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'艾珮蓁', year:'111', type:'alumni', thesis:'比較MFCC和MIFE作為數字信號處理使用CNN對語音辨識之研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'張嘉豪', year:'111', type:'alumni', thesis:'氣動式電熱平台開發與其於環氧樹脂參數最佳化研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'林品蓉', year:'111', type:'alumni', thesis:'刀具磨損分析與不同配置條件於車削顫動抑制之影響', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'陳昱嘉', year:'111', type:'alumni', thesis:'應用影像處理於磨耗刀具磨耗檢測與3D模型建立研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'施子彤', year:'111', type:'alumni', thesis:'自製PCD多晶鑽石刀具於奈米磨粒磨耗及刀具磨損之研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'李宜欣', year:'110', type:'alumni', thesis:'提高研磨電感之鋁切削加工分析研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'黃靖堯', year:'110', type:'alumni', thesis:'捲曲式葉片設計對於水潤滑性能之影響', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'吳瑞謙', year:'109', type:'alumni', thesis:'複合式奈米高能量粒子水潤滑性能研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'洪建龍', year:'109', type:'alumni', thesis:'應用變數整合預測封裝製程之最佳化參數設計與實務驗證', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'邱家文', year:'109', type:'alumni', thesis:'磨料配比對鑽孔性能與表面粗糙度之解析建模', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'邱家祺', year:'109', type:'alumni', thesis:'平面磨削中磨耗行為對振動影響分析', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'楊翊翔', year:'109', type:'alumni', thesis:'碳化矽之鑽石線切削加工特性研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'劉孟杰', year:'108', type:'alumni', thesis:'混合磨料於鑽削與研磨對玻璃品質影響之研究', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'劉智偉', year:'108', type:'alumni', thesis:'減振構件之阻尼系統最佳化設計', career:'待補', graduateFlow:'待補', industryCategory:'待補'},
+            {name:'陳家興', year:'108', type:'alumni', thesis:'三相感應馬達之最佳化與模擬分析', career:'待補', graduateFlow:'待補', industryCategory:'待補'}
+        ];
 
         const AdminApp = () => {
             const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -353,6 +426,21 @@
                 const rows = items.map(item => ({ collection: tab, data: { ...item, createdAt: Date.now() } }));
                 await supabase.from('lab_content').insert(rows);
                 loadData();
+            };
+
+            const handleImportDefaultStudents = async () => {
+                if (!supabase) return;
+                if (!confirm(`確定要匯入 ${DEFAULT_STUDENTS_IMPORT.length} 筆歷屆學生資料嗎？
+系統會自動略過已存在的「姓名＋論文題目」資料。`)) return;
+                const { data: existingRows } = await supabase.from('lab_content').select('id, data').eq('collection', 'members').limit(1000);
+                const existingKeys = new Set((existingRows || []).map(r => `${r.data?.name || ''}__${r.data?.thesis || ''}`));
+                const rows = DEFAULT_STUDENTS_IMPORT
+                    .filter(item => !existingKeys.has(`${item.name}__${item.thesis}`))
+                    .map((item, idx) => ({ collection: 'members', data: { ...item, researchDetail: '歷屆研究生', createdAt: Date.now() - idx * 1000, updatedAt: Date.now() } }));
+                if (rows.length === 0) { alert('沒有新資料需要匯入。'); return; }
+                const { error } = await supabase.from('lab_content').insert(rows);
+                if (error) alert('匯入失敗：' + error.message);
+                else { alert(`已成功匯入 ${rows.length} 筆學生資料。`); if (tab !== 'members') setTab('members'); else loadData(); }
             };
 
             const handleDelete = async (id) => {
@@ -403,7 +491,10 @@
                                 <h2 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight">{TAB_NAMES[tab]}</h2>
                                 <p className="text-slate-400 mt-2 font-medium hidden md:block">管理實驗室網站內容</p>
                             </div>
-                            <button onClick={() => setEditing({})} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 font-black transition-all">+ 新增{TAB_NAMES[tab]}</button>
+                            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                                {tab === 'members' && <button onClick={handleImportDefaultStudents} className="w-full md:w-auto bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 font-black transition-all">一鍵匯入歷屆學生</button>}
+                                <button onClick={() => setEditing({})} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 font-black transition-all">+ 新增{TAB_NAMES[tab]}</button>
+                            </div>
                         </header>
 
                         <div className="bg-white rounded-[24px] md:rounded-[40px] shadow-sm border border-slate-200 overflow-hidden">
@@ -415,6 +506,8 @@
                                         <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                                             <td className="p-8">
                                                 <div className="font-black text-slate-800 text-lg">{item.title || item.name}</div>
+                                                {tab === 'members' && item.thesis && <div className="text-sm text-slate-500 font-bold mt-2 line-clamp-2">論文：{item.thesis}</div>}
+                                                {tab === 'members' && (item.graduateFlow || item.career) && <div className="text-xs text-emerald-600 font-bold mt-1">畢業流向：{item.graduateFlow || item.career}</div>}
                                                 <div className="text-[11px] text-slate-400 font-bold mt-1 flex gap-4 uppercase tracking-tighter">
                                                     {item.planYear && <span className="text-blue-500 px-2 py-0.5 bg-blue-50 rounded">計畫年度: {item.planYear}</span>}
                                                     {item.execYear && <span className="text-slate-500 px-2 py-0.5 bg-slate-100 rounded">執行年度: {item.execYear}</span>}
@@ -436,6 +529,9 @@
                                     <div key={item.id} className="p-5 space-y-3">
                                         <div>
                                             <div className="font-black text-slate-800">{item.title || item.name}</div>
+                                            {tab === 'members' && item.thesis && <div className="text-xs text-slate-500 font-bold mt-1 line-clamp-2">論文：{item.thesis}</div>
+                                            }
+                                            {tab === 'members' && item.industryCategory && <div className="text-xs text-orange-600 font-bold mt-1">產業：{item.industryCategory}</div>}
                                             <div className="text-[10px] text-slate-400 font-bold mt-1 flex flex-wrap gap-2">
                                                 {item.planYear && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded">年度: {item.planYear}</span>}
                                                 {item.tag && <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded">{item.tag}</span>}
